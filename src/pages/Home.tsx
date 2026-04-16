@@ -168,11 +168,15 @@ export default function Home() {
   const handleStatusSelect = (value: string) =>
     updateFilters({ status: value });
 
-  const handleVendorSelect = (vendorCode: string) =>
+  const handleVendorSelect = (vendorCode: string) => {
+    setSelectedClient(null);
     updateFilters({ vendor: vendorCode });
+  };
 
-  const handleProveedorSelect = (proveedorId: string) =>
+  const handleProveedorSelect = (proveedorId: string) => {
+    setSelectedClient(null);
     updateFilters({ idProveedor: proveedorId });
+  };
 
   const handleRefresh = () => {
     const hadActiveContext = hasActiveFilters || Boolean(selectedClient);
