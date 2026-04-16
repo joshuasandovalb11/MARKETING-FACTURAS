@@ -155,7 +155,9 @@ export default function Home() {
         return true;
       });
     }
-    if (selectedClient) return [selectedClient];
+
+    if (selectedClient && !hasActiveFilters) return [selectedClient];
+
     return [];
   }, [mapClients, filters.status, selectedClient, hasActiveFilters]);
 
