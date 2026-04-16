@@ -9,9 +9,11 @@ import {
   RefreshCw,
   Search,
   AlertCircle,
+  Star,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useProveedores } from '../../hooks/useProveedores';
+import { useProveedorFavorites } from '../../hooks/useProveedorFavorites';
 
 interface ProveedorPickerProps {
   selectedProveedor: string;
@@ -27,6 +29,7 @@ export default function ProveedorPicker({
 }: ProveedorPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { favorites, toggleFavorite } = useProveedorFavorites();
   const { proveedores, loading, error, fetchProveedores } = useProveedores();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -37,20 +40,33 @@ export default function ProveedorPicker({
     left: '-9999px',
   });
   const [animOrigin, setAnimOrigin] = useState<'top' | 'bottom'>('top');
+
   const isActive = selectedProveedor !== '';
   const isAll = selectedProveedor === '' || selectedProveedor === 'all';
-
   const selectedObj = proveedores.find(
     (p) => String(p.id) === String(selectedProveedor)
   );
-
   const displayText = selectedObj
     ? selectedObj.nombre
     : 'Todos los Proveedores';
 
-  const filteredProveedores = proveedores.filter((prov) =>
-    prov.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleToggleFavorite = (e: React.MouseEvent, provId: string) => {
+    e.stopPropagation();
+    toggleFavorite(provId);
+  };
+
+  const { favList, restList } = (() => {
+    const filtered = proveedores.filter((p) =>
+      p.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const favs = filtered
+      .filter((p) => favorites.has(String(p.id)))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    const rest = filtered
+      .filter((p) => !favorites.has(String(p.id)))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    return { favList: favs, restList: rest };
+  })();
 
   const updatePosition = () => {
     if (!buttonRef.current) return;
@@ -90,14 +106,11 @@ export default function ProveedorPicker({
       };
       setAnimOrigin('top');
     }
-
     setDropdownStyle(style);
   };
 
   const handleToggle = () => {
-    if (!isOpen) {
-      updatePosition();
-    }
+    if (!isOpen) updatePosition();
     setIsOpen(!isOpen);
   };
 
@@ -129,6 +142,47 @@ export default function ProveedorPicker({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const ProveedorRow = ({ prov }: { prov: { id: string; nombre: string } }) => {
+    const isSelected = String(selectedProveedor) === String(prov.id);
+    const isFav = favorites.has(String(prov.id));
+
+    return (
+      <button
+        key={prov.id}
+        onClick={() => {
+          onSelect(String(prov.id));
+          setIsOpen(false);
+          setSearchTerm('');
+        }}
+        className={`w-full text-left px-3 py-2 text-xs rounded-md flex items-center justify-between gap-2 transition-colors cursor-pointer shrink-0 group/row
+          ${isSelected ? 'bg-slate-900 text-white font-medium' : 'hover:bg-slate-50 text-slate-600'}`}
+      >
+        <span className="truncate flex-1" title={prov.nombre}>
+          {prov.nombre}
+        </span>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Estrella de favorito */}
+          <span
+            onClick={(e) => handleToggleFavorite(e, String(prov.id))}
+            className={`rounded transition-colors cursor-pointer
+              ${
+                isFav
+                  ? 'text-amber-400 hover:text-amber-500'
+                  : isSelected
+                    ? 'text-slate-500 hover:text-amber-300'
+                    : 'text-transparent group-hover/row:text-slate-500 hover:text-amber-400!'
+              }`}
+          >
+            <Star className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
+          </span>
+
+          {isSelected && <Check className="w-3.5 h-3.5" />}
+        </div>
+      </button>
+    );
+  };
+
   return (
     <div className="relative group w-full">
       <button
@@ -136,16 +190,11 @@ export default function ProveedorPicker({
         onClick={handleToggle}
         className={`w-full px-3 py-2 flex items-center justify-between text-sm transition-all rounded-md border shadow-sm cursor-pointer
           ${isOpen ? 'border-slate-300 ring-1 ring-slate-300' : 'hover:border-slate-300'}
-          ${
-            isActive
-              ? 'bg-white border-slate-300 text-slate-900 font-medium'
-              : 'bg-white border-slate-200 text-slate-400'
-          }
-        `}
+          ${isActive ? 'bg-white border-slate-300 text-slate-900 font-medium' : 'bg-white border-slate-200 text-slate-400'}`}
       >
         <div className="flex items-center gap-2 overflow-hidden flex-1">
           <Truck
-            className={`w-4 h-4 shrink-0 ${isOpen ? 'text-slate-600' : 'text-slate-400'} ${isActive ? 'text-slate-900' : 'text-slate-400'}`}
+            className={`w-4 h-4 shrink-0 ${isOpen || isActive ? 'text-slate-900' : 'text-slate-400'}`}
           />
           <span className="truncate">{displayText}</span>
         </div>
@@ -200,7 +249,7 @@ export default function ProveedorPicker({
               className="fixed bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden"
             >
               {loading ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
+                <div className="p-6 flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
                   <Loader2 className="w-8 h-8 animate-spin" />
                   <span className="text-xs font-medium">
                     Sincronizando Proveedores...
@@ -238,6 +287,7 @@ export default function ProveedorPicker({
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-1.5 flex flex-col gap-0.5 custom-scrollbar min-h-0">
+                    {/* OPCIÓN: Todos */}
                     {searchTerm.trim() === '' && (
                       <>
                         <button
@@ -247,52 +297,38 @@ export default function ProveedorPicker({
                             setSearchTerm('');
                           }}
                           className={`w-full text-left px-3 py-2 text-xs rounded-md flex items-center justify-between transition-colors cursor-pointer shrink-0
-                          ${
-                            isAll
-                              ? 'bg-slate-900 text-white font-medium'
-                              : 'hover:bg-slate-50 text-slate-600'
-                          }`}
+                          ${isAll ? 'bg-slate-900 text-white font-medium' : 'hover:bg-slate-50 text-slate-600'}`}
                         >
                           <span>Todos los Proveedores</span>
                           {isAll && <Check className="w-3.5 h-3.5" />}
                         </button>
-                        <div className="border-t border-slate-100 my-1 shrink-0" />
+                        <div className="border-t border-slate-200 my-1 shrink-0" />
                       </>
                     )}
 
-                    {filteredProveedores.length > 0 ? (
-                      filteredProveedores.map((prov) => {
-                        const isSelected =
-                          String(selectedProveedor) === String(prov.id);
-                        return (
-                          <button
-                            key={prov.id}
-                            onClick={() => {
-                              onSelect(String(prov.id));
-                              setIsOpen(false);
-                              setSearchTerm('');
-                            }}
-                            className={`w-full text-left px-3 py-2 text-xs rounded-md flex items-center justify-between transition-colors cursor-pointer shrink-0
-                            ${
-                              isSelected
-                                ? 'bg-slate-900 text-white font-medium'
-                                : 'hover:bg-slate-50 text-slate-600'
-                            }`}
-                          >
-                            <span className="truncate pr-2" title={prov.nombre}>
-                              {prov.nombre}
-                            </span>
-                            {isSelected && (
-                              <Check className="w-3.5 h-3.5 shrink-0" />
-                            )}
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="p-4 text-center text-xs text-slate-400">
-                        No se encontraron resultados
-                      </div>
+                    {/* FAVORITOS */}
+                    {favList.length > 0 && (
+                      <>
+                        <p className="px-3 pt-1 pb-0.5 text-[10px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-current" /> Favoritos
+                        </p>
+                        {favList.map((prov) => (
+                          <ProveedorRow key={prov.id} prov={prov} />
+                        ))}
+                        <div className="border-t border-slate-200 my-1 shrink-0" />
+                      </>
                     )}
+
+                    {/* RESTO */}
+                    {restList.length > 0
+                      ? restList.map((prov) => (
+                          <ProveedorRow key={prov.id} prov={prov} />
+                        ))
+                      : favList.length === 0 && (
+                          <div className="p-4 text-center text-xs text-slate-400">
+                            No se encontraron resultados
+                          </div>
+                        )}
                   </div>
                 </>
               )}

@@ -186,7 +186,7 @@ export default function VendorPicker({
               className="fixed bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden"
             >
               {loading ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
+                <div className="p-6 flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
                   <Loader2 className="w-8 h-8 animate-spin" />
                   <span className="text-xs font-medium">
                     Sincronizando Vendedores...

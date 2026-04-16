@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertCircle, Loader2, Search, UserRoundSearch, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import type { Client } from '../../types';
+import type { Client, ApiSearchClient } from '../../types';
 import { useClients } from '../../hooks/useClients';
 
 interface ClientSearchProps {
@@ -98,11 +98,23 @@ export default function ClientSearch({
   );
 
   const handleSelect = useCallback(
-    (rawClient: any) => {
+    (rawClient: ApiSearchClient) => {
+      const id = rawClient.idCliente ?? rawClient.id;
+
+      const hasMultiple =
+        results.filter((r) => (r.idCliente ?? r.id) === id).length > 1;
+
+      let sucursal = (rawClient.sucursal || rawClient.branchName || '').trim();
+      const isMatriz = sucursal.toLowerCase() === 'matriz' || sucursal === '';
+
+      if (isMatriz) {
+        sucursal = hasMultiple ? 'Matriz' : '';
+      }
+
       const adaptedClient: Client = {
         id: rawClient.id,
         name: rawClient.nombre || rawClient.name,
-        branchName: rawClient.sucursal || rawClient.branchName || null,
+        branchName: sucursal,
         lat: rawClient.lat,
         lng: rawClient.lng,
         idSucursal: rawClient.idSucursal ?? 0,
@@ -125,7 +137,7 @@ export default function ClientSearch({
       if (debounceRef.current) clearTimeout(debounceRef.current);
       inputRef.current?.blur();
     },
-    [onSelect, clearResults]
+    [onSelect, clearResults, results]
   );
 
   const handleClear = useCallback(

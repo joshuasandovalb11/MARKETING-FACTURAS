@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { onAuthStateChanged, type User, signOut } from 'firebase/auth';
 import { auth } from '../services/firebase';
+import LoadingScreen from '../components/ui/LoadingScreen';
 
 interface AuthContextType {
   user: User | null;
@@ -35,7 +36,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, loading, logout }}>
-      {!loading && children}
+      {loading ? (
+        <div className="flex h-screen w-full items-center justify-center">
+          <LoadingScreen />
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };

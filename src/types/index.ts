@@ -16,7 +16,20 @@ export interface Client {
   lng: number;
   vendor?: string;
   idSucursal?: number;
+  giroComercial?: string | null;
   marketingData?: MarketingData;
+}
+
+export interface ApiSearchClient {
+  id: string | number;
+  name: string;
+  idCliente?: string | number;
+  idSucursal?: number;
+  nombre?: string;
+  sucursal?: string;
+  branchName?: string;
+  lat: number;
+  lng: number;
 }
 
 export interface FilterState {
@@ -32,4 +45,21 @@ export interface FilterState {
   convertirAMXN: boolean;
   excluirCanceladas: boolean;
   soloConVentas: boolean;
+}
+
+export interface InvoiceItem {
+  descripcion: string;
+  cantidad: number;
+  precioUnitario: number;
+  totalLinea: number;
+  proveedor: string;
+}
+
+export interface Invoice {
+  idFactura: string | number;
+  fecha: string;
+  total: number;
+  moneda: string;
+  articulos: InvoiceItem[];
+  proveedoresUnicos: string[];
 }

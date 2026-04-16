@@ -5,12 +5,16 @@ import {
   Marker,
   InfoWindow,
 } from '@react-google-maps/api';
+import { LoaderCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Client } from '../../types';
 
 interface MapProps {
   clients: Client[];
   isIdle?: boolean;
   isLoading?: boolean;
+  onOpenInvoices?: (client: Client) => void;
+  filterHash?: string;
 }
 
 const containerStyle = {
@@ -42,6 +46,8 @@ export default function MapContainer({
   clients,
   isIdle = false,
   isLoading = false,
+  onOpenInvoices,
+  filterHash,
 }: MapProps) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -50,6 +56,10 @@ export default function MapContainer({
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+  useEffect(() => {
+    setSelectedClient(null);
+  }, [filterHash]);
 
   const stats = useMemo(() => {
     return clients.reduce(
@@ -73,8 +83,21 @@ export default function MapContainer({
     );
   }, [clients]);
 
-  // AJUSTE DE CÁMARA
   useEffect(() => {
+    if (selectedClient) {
+      const stillVisible = clients.some((client) => {
+        const selectedId =
+          selectedClient.marketingData?.clienteId ?? selectedClient.id;
+        const currentId = client.marketingData?.clienteId ?? client.id;
+
+        return String(selectedId) === String(currentId);
+      });
+
+      if (!stillVisible) {
+        setSelectedClient(null);
+      }
+    }
+
     if (map && clients.length > 0 && !isIdle) {
       const bounds = new window.google.maps.LatLngBounds();
       let hasValidPoints = false;
@@ -113,7 +136,8 @@ export default function MapContainer({
     setMap(null);
   }, []);
 
-  const capitalizeText = (name: string) => {
+  const capitalizeText = (name?: string | null) => {
+    if (!name) return '';
     return name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
@@ -144,7 +168,9 @@ export default function MapContainer({
             key={client.id}
             position={{ lat: client.lat, lng: client.lng }}
             icon={getMarkerIcon(client)}
-            onClick={() => setSelectedClient(client)}
+            onClick={() => {
+              setSelectedClient(client);
+            }}
           />
         ))}
 
@@ -153,42 +179,34 @@ export default function MapContainer({
             position={{ lat: selectedClient.lat, lng: selectedClient.lng }}
             onCloseClick={() => setSelectedClient(null)}
           >
-            <div className="min-w-40">
+            <div className="min-w-40 max-w-50">
               <p className="text-[13px] font-bold text-gray-900">
                 #{selectedClient.marketingData?.clienteId || selectedClient.id}
               </p>
 
-              <p className="text-[13px] font-bold text-gray-900 leading-tight">
+              {/* NOMBRE DEL CLIENTE */}
+              <p className="text-[13px] font-bold text-gray-900 truncate leading-tight">
                 {capitalizeText(selectedClient.name)}
               </p>
 
-              {/* LÓGICA INTELIGENTE DE SUCURSAL */}
-              {(() => {
-                const hasMultipleBranches =
-                  clients.filter(
-                    (c) =>
-                      c.marketingData?.clienteId ===
-                      selectedClient.marketingData?.clienteId
-                  ).length > 1;
+              {/* SUCURSAL */}
+              {selectedClient.branchName && (
+                <p className="text-[13px] font-semibold text-blue-600 mt-0.5">
+                  {capitalizeText(selectedClient.branchName)}
+                </p>
+              )}
 
-                const showBranch =
-                  selectedClient.branchName &&
-                  (selectedClient.branchName.trim().toLowerCase() !==
-                    'matriz' ||
-                    hasMultipleBranches);
-
-                if (!showBranch) return null;
-
-                return (
-                  <p className="text-[13px] font-semibold text-blue-600 mt-0.5">
-                    {capitalizeText(selectedClient.branchName as string)}
-                  </p>
-                );
-              })()}
+              {/* GIRO COMERCIAL */}
+              {selectedClient.giroComercial && (
+                <p className="text-[10px] font-bold text-slate-500 mt-1.5 tracking-wider uppercase">
+                  {selectedClient.giroComercial}
+                </p>
+              )}
 
               <div className="border-t border-gray-200 my-2"></div>
 
               <div className="space-y-1.5">
+                {/* ESTADO */}
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-700">Estado:</span>
                   <span
@@ -202,6 +220,7 @@ export default function MapContainer({
                   </span>
                 </div>
 
+                {/* NÚMERO DE FACTURAS */}
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-800"># Facturas:</span>
                   <span className="font-medium text-gray-900">
@@ -209,6 +228,7 @@ export default function MapContainer({
                   </span>
                 </div>
 
+                {/* TOTAL MXN */}
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-800">Total MXN:</span>
                   <span className="font-medium text-gray-900">
@@ -219,6 +239,7 @@ export default function MapContainer({
                   </span>
                 </div>
 
+                {/* TOTAL USD */}
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-800">Total USD:</span>
                   <span className="font-medium text-gray-900">
@@ -229,10 +250,42 @@ export default function MapContainer({
                   </span>
                 </div>
               </div>
+
+              {(selectedClient.marketingData?.ordersCount || 0) > 0 && (
+                <button
+                  onClick={() => onOpenInvoices?.(selectedClient)}
+                  className="mt-2 w-full items-center text-center justify-center text-blue-700 hover:underline font-bold text-[11px] tracking-wider transition-colors cursor-pointer"
+                >
+                  Ver detalle
+                </button>
+              )}
             </div>
           </InfoWindow>
         )}
       </GoogleMap>
+
+      {/* OVERLAY DE CARGA */}
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-40 flex items-center justify-center bg-white/10 backdrop-blur-[2px]"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="flex flex-col items-center"
+            >
+              <div className="">
+                <LoaderCircle className="w-18 h-18 text-blue-600 animate-spin" />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* BARRA DE ESTADÍSTICAS FLOTANTE */}
       {!isIdle && !isLoading && clients.length > 0 && (
@@ -257,7 +310,6 @@ export default function MapContainer({
               </div>
             </div>
 
-            {/* Divisor Vertical */}
             <div className="w-px h-8 bg-gray-300"></div>
 
             {/* Sección: Ventas MXN */}

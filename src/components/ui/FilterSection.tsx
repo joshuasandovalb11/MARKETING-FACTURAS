@@ -19,7 +19,7 @@ export default function FilterSection({
   return (
     <div className="px-5 py-4 border-b border-slate-200">
       <button
-        className="flex items-center gap-2 w-full text-left text-slate-600 hover:text-black transition-colors"
+        className={`flex items-center gap-2 w-full text-left hover:text-black ${isOpen ? 'text-black' : 'text-gray-500'} transition-colors`}
         onClick={() => setIsOpen(!isOpen)}
       >
         <ChevronRight
