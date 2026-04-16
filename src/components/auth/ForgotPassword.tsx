@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Mail,
@@ -28,6 +28,16 @@ export default function ForgotPassword({
   const [buttonSuccess, setButtonSuccess] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const successTimerRef = useRef<number | null>(null);
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const clearSuccessTimer = () => {
+    if (successTimerRef.current) {
+      window.clearTimeout(successTimerRef.current);
+      successTimerRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -36,15 +46,24 @@ export default function ForgotPassword({
       setButtonSuccess(false);
       setError(null);
       setLoading(false);
+      clearSuccessTimer();
     }
+
+    return () => {
+      clearSuccessTimer();
+    };
   }, [isOpen, initialEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!normalizedEmail) {
+      setError('Ingresa un correo válido para continuar.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
+    clearSuccessTimer();
 
     try {
       const actionCodeSettings = {
@@ -52,11 +71,11 @@ export default function ForgotPassword({
         handleCodeInApp: true,
       };
 
-      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+      await sendPasswordResetEmail(auth, normalizedEmail, actionCodeSettings);
 
       setLoading(false);
       setButtonSuccess(true);
-      setTimeout(() => {
+      successTimerRef.current = window.setTimeout(() => {
         setSuccess(true);
         setButtonSuccess(false);
       }, 1500);
@@ -85,7 +104,7 @@ export default function ForgotPassword({
           onClick={onClose}
         >
           <motion.div
-            className="bg-white rounded-xl w-full max-w-md overflow-hidden relative"
+            className="bg-white rounded-xl w-full max-w-md overflow-hidden relative shadow-2xl"
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -161,6 +180,8 @@ export default function ForgotPassword({
                       <input
                         type="email"
                         required
+                        autoComplete="email"
+                        inputMode="email"
                         className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
                         placeholder="ejemplo@empresa.com"
                         value={email}
