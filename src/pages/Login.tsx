@@ -19,8 +19,18 @@ interface LoginProps {
   onLoginTransition?: (isTransitioning: boolean) => void;
 }
 
+const LAST_EMAIL_STORAGE_KEY = 'marketing:last-login-email';
+
+function getStoredEmail() {
+  try {
+    return window.localStorage.getItem(LAST_EMAIL_STORAGE_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
 export default function Login({ onLoginTransition }: LoginProps) {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(getStoredEmail);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,6 +69,12 @@ export default function Login({ onLoginTransition }: LoginProps) {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
+
+      try {
+        window.localStorage.setItem(LAST_EMAIL_STORAGE_KEY, email.trim());
+      } catch {
+        // Ignore storage failures, login should continue normally.
+      }
 
       setLoading(false);
       setButtonSuccess(true);
