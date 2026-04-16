@@ -1,9 +1,9 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { SlidersHorizontal } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 import Logout from '../components/ui/LogoutModal';
 import MapContainer from '../components/map/MapContainer';
@@ -14,19 +14,26 @@ import ClientSearch from '../components/filters/ClientSearch';
 import ProveedorPicker from '../components/filters/ProveedorPicker';
 import FilterSection from '../components/ui/FilterSection';
 import type { Client } from '../types';
-import LoadingScreen from '../components/ui/LoadingScreen';
 import Login from './Login';
 import UserMenu from '../components/ui/UserMenu';
 import InvoiceDrawer from '../components/ui/InvoiceDrawer';
 import { useMarketingAnalysis } from '../hooks/useMarketingAnalysis';
+import { warmupStaticCatalogs } from '../utils/queryWarmup';
+import { useMinimumVisibleFlag } from '../hooks/useMinimumVisibleFlag';
+import { useNotificationToast } from '../hooks/useNotificationToast';
+import {
+  resolveErrorMessageNotification,
+  resolveEventNotification,
+} from '../utils/notificationPolicy';
 
 export default function Home() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isReloading, setIsReloading] = useState(false);
   const [isLoginTransitioning, setIsLoginTransitioning] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const { notify } = useNotificationToast();
 
   const [isInvoiceDrawerOpen, setIsInvoiceDrawerOpen] = useState(false);
   const [invoiceClient, setInvoiceClient] = useState<Client | null>(null);
@@ -63,31 +70,76 @@ export default function Home() {
     (filters.status !== '' && filters.status !== 'all')
   );
 
-  const filterHash = JSON.stringify(filters) + (selectedClient?.id || '');
+  const filterHash =
+    JSON.stringify(filters) +
+    (selectedClient?.id || '') +
+    ':' +
+    (selectedClient?.idSucursal ?? 'none');
 
   useEffect(() => {
     setIsInvoiceDrawerOpen(false);
   }, [filterHash]);
 
-  const { mapClients, isDataLoading, fetchError } = useMarketingAnalysis({
+  const {
+    mapClients,
+    isInitialLoading,
+    isRefreshing,
+    hasError,
+    fetchError,
+    refetchAnalysis,
+  } = useMarketingAnalysis({
     filters,
     selectedClient,
     hasActiveFilters,
   });
 
+  const isRefreshingVisible = useMinimumVisibleFlag(isRefreshing, 450);
+
   useEffect(() => {
-    if (fetchError) {
-      toast.error(fetchError);
-    }
-  }, [fetchError]);
+    if (!fetchError) return;
+
+    notify(
+      resolveErrorMessageNotification({
+        scope: 'analysis-map',
+        message: fetchError,
+        fallback: 'No se pudo cargar el analisis de clientes.',
+      })
+    );
+  }, [fetchError, notify]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const handleOffline = () => {
+      notify(resolveEventNotification('network-offline'));
+    };
+
+    const handleOnline = () => {
+      notify(resolveEventNotification('network-online'));
+    };
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [user, notify]);
 
   useEffect(() => {
     const savedMessage = window.sessionStorage.getItem('toast_message');
     if (savedMessage) {
-      toast.success(savedMessage);
+      notify(resolveEventNotification('session-message', savedMessage));
       window.sessionStorage.removeItem('toast_message');
     }
-  }, []);
+  }, [notify]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    void warmupStaticCatalogs(queryClient);
+  }, [user, queryClient]);
 
   const clientsToDisplay = useMemo(() => {
     if (!hasActiveFilters && !selectedClient) {
@@ -122,29 +174,16 @@ export default function Home() {
   const handleProveedorSelect = (proveedorId: string) =>
     updateFilters({ idProveedor: proveedorId });
 
-  const handleRefresh = async () => {
-    setIsReloading(true);
-
+  const handleRefresh = () => {
     setSearchParams({});
     setSelectedClient(null);
     setIsInvoiceDrawerOpen(false);
 
-    setTimeout(() => {
-      setIsReloading(false);
-      toast.success('Filtros restablecidos');
-    }, 1000);
+    notify(resolveEventNotification('filters-reset'));
   };
 
   return (
     <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans overflow-hidden">
-      <AnimatePresence>
-        {isReloading && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center">
-            <LoadingScreen />
-          </div>
-        )}
-      </AnimatePresence>
-
       <AnimatePresence>
         {(!user || isLoginTransitioning) && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
@@ -251,7 +290,10 @@ export default function Home() {
             <MapContainer
               clients={clientsToDisplay}
               isIdle={!hasActiveFilters && !selectedClient}
-              isLoading={isDataLoading}
+              isLoading={isInitialLoading}
+              isRefreshing={isRefreshingVisible}
+              errorMessage={hasError ? fetchError : null}
+              onRetry={refetchAnalysis}
               filterHash={filterHash}
               onOpenInvoices={(client) => {
                 setInvoiceClient(client);

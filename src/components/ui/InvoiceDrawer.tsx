@@ -1,9 +1,14 @@
 // src/components/ui/InvoiceDrawer.tsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown, Package, Building2 } from 'lucide-react';
 import type { Client } from '../../types';
 import { useClientInvoices } from '../../hooks/useClientInvoices';
+import {
+  resolveErrorMessageNotification,
+  resolveErrorNotification,
+} from '../../utils/notificationPolicy';
+import { useNotificationToast } from '../../hooks/useNotificationToast';
 
 interface InvoiceDrawerProps {
   isOpen: boolean;
@@ -30,11 +35,14 @@ export default function InvoiceDrawer({
   filters,
 }: InvoiceDrawerProps) {
   const [expandedId, setExpandedId] = useState<string | number | null>(null);
+  const { notify } = useNotificationToast();
 
   const {
     data: invoices,
     isLoading,
     isError,
+    error,
+    refetch,
   } = useClientInvoices({
     clientId: client?.marketingData?.clienteId || client?.id,
     idSucursal: client?.idSucursal,
@@ -56,6 +64,24 @@ export default function InvoiceDrawer({
     invoices
       ?.filter((i) => i.moneda.startsWith('D') || i.moneda.startsWith('U'))
       .reduce((s, i) => s + i.total, 0) || 0;
+
+  const invoiceErrorMessage = resolveErrorNotification({
+    scope: 'invoice-drawer',
+    error,
+    fallback: 'Error al cargar facturas.',
+  }).message;
+
+  useEffect(() => {
+    if (!isError) return;
+
+    notify(
+      resolveErrorMessageNotification({
+        scope: 'invoice-drawer',
+        message: invoiceErrorMessage,
+        fallback: 'Error al cargar facturas.',
+      })
+    );
+  }, [isError, invoiceErrorMessage, notify]);
 
   return (
     <AnimatePresence>
@@ -109,10 +135,19 @@ export default function InvoiceDrawer({
                   <p className="text-xs">Cargando...</p>
                 </div>
               ) : isError ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-xs text-red-400">
-                    Error al cargar facturas.
+                <div className="flex flex-col items-center justify-center h-full gap-2 px-4">
+                  <p className="text-xs text-red-400 text-center">
+                    {invoiceErrorMessage}
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void refetch();
+                    }}
+                    className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+                  >
+                    Reintentar
+                  </button>
                 </div>
               ) : invoices && invoices.length > 0 ? (
                 <div className="divide-y divide-slate-100">

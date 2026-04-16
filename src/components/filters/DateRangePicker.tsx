@@ -8,12 +8,12 @@ import {
   ChevronRight,
   CalendarDays,
   CalendarRange,
-  Loader2,
-  AlertCircle,
-  RefreshCw,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useFechasDisponibles } from '../../hooks/useDates';
+import AsyncFeedbackBlock from '../ui/feedback/AsyncFeedbackBlock';
+import { useNotificationToast } from '../../hooks/useNotificationToast';
+import { resolveErrorMessageNotification } from '../../utils/notificationPolicy';
 
 interface DateRangePickerProps {
   startDate: string;
@@ -50,8 +50,10 @@ export default function DateRangePicker({
     availableDates,
     loading: datesLoading,
     error,
+    errorMessage,
     fetchFechas,
   } = useFechasDisponibles();
+  const { notify } = useNotificationToast();
 
   const [positionConfig, setPositionConfig] = useState<any>({
     style: { position: 'fixed', top: '-9999px', left: '-9999px' },
@@ -158,6 +160,18 @@ export default function DateRangePicker({
       window.removeEventListener('resize', updatePosition);
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!error || !errorMessage) return;
+
+    notify(
+      resolveErrorMessageNotification({
+        scope: 'dates-picker',
+        message: errorMessage,
+        fallback: 'No se pudieron cargar las fechas disponibles.',
+      })
+    );
+  }, [error, errorMessage, notify]);
 
   const getDaysInMonth = (year: number, month: number) =>
     new Date(year, month + 1, 0).getDate();
@@ -316,33 +330,28 @@ export default function DateRangePicker({
             >
               {/* ESTADO DE CARGA */}
               {datesLoading ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin" />
-                  <span className="text-xs font-medium">
-                    Sincronizando fechas...
-                  </span>
-                </div>
+                <AsyncFeedbackBlock
+                  isLoading={true}
+                  isError={false}
+                  loadingMessage="Sincronizando fechas..."
+                  errorMessage=""
+                  className="flex-1"
+                />
               ) : /* ESTADO DE ERROR */
               error ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-slate-600 text-xs text-center gap-3">
-                  <AlertCircle className="w-8 h-8 text-slate-400" />
-                  <span className="font-medium text-sm">Error de conexión</span>
-                  <p className="text-slate-500 max-w-50">
-                    No se pudieron cargar las fechas disponibles.
-                  </p>
-                  {fetchFechas && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        fetchFechas();
-                      }}
-                      className="flex text-xs font-medium items-center gap-1.5 px-4 py-2 mt-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-md cursor-pointer shadow-sm transition-colors"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      <span>Reintentar</span>
-                    </button>
-                  )}
-                </div>
+                <AsyncFeedbackBlock
+                  isLoading={false}
+                  isError={true}
+                  loadingMessage=""
+                  errorMessage={
+                    errorMessage ||
+                    'No se pudieron cargar las fechas disponibles.'
+                  }
+                  onRetry={() => {
+                    void fetchFechas();
+                  }}
+                  className="flex-1"
+                />
               ) : (
                 /* CALENDARIO NORMAL */
                 <>

@@ -5,14 +5,19 @@ import {
   Marker,
   InfoWindow,
 } from '@react-google-maps/api';
-import { LoaderCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import type { Client } from '../../types';
+import LoadingLayer from '../ui/feedback/LoadingLayer';
+import RefreshingMask from '../ui/feedback/RefreshingMask';
+import RecoverableErrorBanner from '../ui/feedback/RecoverableErrorBanner';
 
 interface MapProps {
   clients: Client[];
   isIdle?: boolean;
   isLoading?: boolean;
+  isRefreshing?: boolean;
+  errorMessage?: string | null;
+  onRetry?: () => void;
   onOpenInvoices?: (client: Client) => void;
   filterHash?: string;
 }
@@ -46,6 +51,9 @@ export default function MapContainer({
   clients,
   isIdle = false,
   isLoading = false,
+  isRefreshing = false,
+  errorMessage = null,
+  onRetry,
   onOpenInvoices,
   filterHash,
 }: MapProps) {
@@ -267,28 +275,21 @@ export default function MapContainer({
       {/* OVERLAY DE CARGA */}
       <AnimatePresence>
         {isLoading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-40 flex items-center justify-center bg-white/10 backdrop-blur-[2px]"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex flex-col items-center"
-            >
-              <div className="">
-                <LoaderCircle className="w-18 h-18 text-blue-600 animate-spin" />
-              </div>
-            </motion.div>
-          </motion.div>
+          <LoadingLayer
+            variant="absolute"
+            className="bg-white/25 backdrop-blur-xs"
+          />
         )}
       </AnimatePresence>
 
+      {!isLoading && isRefreshing && <RefreshingMask />}
+
+      {!isLoading && errorMessage && (
+        <RecoverableErrorBanner message={errorMessage} onRetry={onRetry} />
+      )}
+
       {/* BARRA DE ESTADÍSTICAS FLOTANTE */}
-      {!isIdle && !isLoading && clients.length > 0 && (
+      {!isIdle && !isLoading && !errorMessage && clients.length > 0 && (
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10 w-auto max-w-[95%]">
           <div className="bg-white/90 backdrop-blur-md shadow-xl rounded-full px-5 py-2.5 flex items-center gap-6 animate-in slide-in-from-bottom-4 duration-500">
             {/* Sección: Clientes */}

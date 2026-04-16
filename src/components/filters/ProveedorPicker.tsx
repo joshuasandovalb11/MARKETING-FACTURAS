@@ -1,19 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  Truck,
-  ChevronDown,
-  Check,
-  Loader2,
-  X,
-  RefreshCw,
-  Search,
-  AlertCircle,
-  Star,
-} from 'lucide-react';
+import { Truck, ChevronDown, Check, X, Search, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useProveedores } from '../../hooks/useProveedores';
 import { useProveedorFavorites } from '../../hooks/useProveedorFavorites';
+import AsyncFeedbackBlock from '../ui/feedback/AsyncFeedbackBlock';
+import { useNotificationToast } from '../../hooks/useNotificationToast';
+import { resolveErrorMessageNotification } from '../../utils/notificationPolicy';
 
 interface ProveedorPickerProps {
   selectedProveedor: string;
@@ -30,7 +23,9 @@ export default function ProveedorPicker({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { favorites, toggleFavorite } = useProveedorFavorites();
-  const { proveedores, loading, error, fetchProveedores } = useProveedores();
+  const { proveedores, loading, error, errorMessage, fetchProveedores } =
+    useProveedores();
+  const { notify } = useNotificationToast();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -142,6 +137,18 @@ export default function ProveedorPicker({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!error || !errorMessage) return;
+
+    notify(
+      resolveErrorMessageNotification({
+        scope: 'proveedores-picker',
+        message: errorMessage,
+        fallback: 'No se pudieron cargar los proveedores.',
+      })
+    );
+  }, [error, errorMessage, notify]);
+
   const ProveedorRow = ({ prov }: { prov: { id: string; nombre: string } }) => {
     const isSelected = String(selectedProveedor) === String(prov.id);
     const isFav = favorites.has(String(prov.id));
@@ -249,27 +256,24 @@ export default function ProveedorPicker({
               className="fixed bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden"
             >
               {loading ? (
-                <div className="p-6 flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin" />
-                  <span className="text-xs font-medium">
-                    Sincronizando Proveedores...
-                  </span>
-                </div>
+                <AsyncFeedbackBlock
+                  isLoading={true}
+                  isError={false}
+                  loadingMessage="Sincronizando proveedores..."
+                  errorMessage=""
+                />
               ) : error ? (
-                <div className="p-6 flex flex-col items-center text-slate-600 text-xs text-center gap-2">
-                  <AlertCircle className="w-6 h-6 text-slate-400" />
-                  <span className="font-medium text-sm">Error de conexión</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      fetchProveedores();
-                    }}
-                    className="flex text-xs font-medium items-center gap-1.5 px-3 py-1.5 mt-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-md cursor-pointer shadow-sm"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>Reintentar</span>
-                  </button>
-                </div>
+                <AsyncFeedbackBlock
+                  isLoading={false}
+                  isError={true}
+                  loadingMessage=""
+                  errorMessage={
+                    errorMessage || 'No se pudieron cargar los proveedores.'
+                  }
+                  onRetry={() => {
+                    void fetchProveedores();
+                  }}
+                />
               ) : (
                 <>
                   <div className="p-2 border-b border-slate-100 bg-white shrink-0">

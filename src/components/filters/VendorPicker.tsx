@@ -1,16 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  Users,
-  ChevronDown,
-  Check,
-  Loader2,
-  X,
-  AlertCircle,
-  RefreshCw,
-} from 'lucide-react';
+import { Users, ChevronDown, Check, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useVendors } from '../../hooks/useVendors';
+import AsyncFeedbackBlock from '../ui/feedback/AsyncFeedbackBlock';
+import { useNotificationToast } from '../../hooks/useNotificationToast';
+import { resolveErrorMessageNotification } from '../../utils/notificationPolicy';
 
 interface VendorPickerProps {
   selectedVendor: string;
@@ -25,7 +20,8 @@ export default function VendorPicker({
   onSelect,
 }: VendorPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { vendors, loading, error, fetchVendors } = useVendors();
+  const { vendors, loading, error, errorMessage, fetchVendors } = useVendors();
+  const { notify } = useNotificationToast();
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -118,6 +114,18 @@ export default function VendorPicker({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!error || !errorMessage) return;
+
+    notify(
+      resolveErrorMessageNotification({
+        scope: 'vendors-picker',
+        message: errorMessage,
+        fallback: 'No se pudieron cargar los vendedores.',
+      })
+    );
+  }, [error, errorMessage, notify]);
+
   return (
     <div className="relative group min-w-48" ref={containerRef}>
       <button
@@ -186,27 +194,24 @@ export default function VendorPicker({
               className="fixed bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden"
             >
               {loading ? (
-                <div className="p-6 flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin" />
-                  <span className="text-xs font-medium">
-                    Sincronizando Vendedores...
-                  </span>
-                </div>
+                <AsyncFeedbackBlock
+                  isLoading={true}
+                  isError={false}
+                  loadingMessage="Sincronizando vendedores..."
+                  errorMessage=""
+                />
               ) : error ? (
-                <div className="p-6 flex flex-col items-center text-slate-600 text-xs text-center gap-2">
-                  <AlertCircle className="w-6 h-6 text-slate-400" />
-                  <span className="font-medium text-sm">Error de conexión</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      fetchVendors();
-                    }}
-                    className="flex text-xs font-medium items-center gap-1.5 px-3 py-1.5 mt-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-md cursor-pointer shadow-sm"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>Reintentar</span>
-                  </button>
-                </div>
+                <AsyncFeedbackBlock
+                  isLoading={false}
+                  isError={true}
+                  loadingMessage=""
+                  errorMessage={
+                    errorMessage || 'No se pudieron cargar los vendedores.'
+                  }
+                  onRetry={() => {
+                    void fetchVendors();
+                  }}
+                />
               ) : (
                 <div className="p-2 flex flex-col gap-1">
                   <button

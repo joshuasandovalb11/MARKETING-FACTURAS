@@ -4,6 +4,8 @@ import { AlertCircle, Loader2, Search, UserRoundSearch, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Client, ApiSearchClient } from '../../types';
 import { useClients } from '../../hooks/useClients';
+import { useNotificationToast } from '../../hooks/useNotificationToast';
+import { resolveErrorMessageNotification } from '../../utils/notificationPolicy';
 
 interface ClientSearchProps {
   onSelect: (client: Client | null) => void;
@@ -27,7 +29,9 @@ export default function ClientSearch({
   const [inputValue, setInputValue] = useState('');
   const [isOpen, setIsOpen] = useState(false);
 
-  const { results, loading, error, searchClients, clearResults } = useClients();
+  const { results, loading, error, errorMessage, searchClients, clearResults } =
+    useClients();
+  const { notify } = useNotificationToast();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -50,6 +54,18 @@ export default function ClientSearch({
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!error || !errorMessage) return;
+
+    notify(
+      resolveErrorMessageNotification({
+        scope: 'client-search',
+        message: errorMessage,
+        fallback: 'Error de conexion al buscar clientes.',
+      })
+    );
+  }, [error, errorMessage, notify]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -167,6 +183,13 @@ export default function ClientSearch({
   const hasValue = inputValue.length > 0 || !!selectedClient;
   const searchLen = inputValue.trim().length;
 
+  const handleRetry = useCallback(() => {
+    const term = inputValue.trim();
+    if (term.length >= 2) {
+      searchClients(term);
+    }
+  }, [inputValue, searchClients]);
+
   return (
     <div className="relative group w-full" ref={containerRef}>
       {/* Input trigger */}
@@ -234,7 +257,16 @@ export default function ClientSearch({
             {!loading && error && (
               <div className="p-6 flex flex-col items-center text-slate-600 text-xs text-center gap-2">
                 <AlertCircle className="w-5 h-5 text-slate-400" />
-                <span className="font-medium text-sm">Error de conexión</span>
+                <span className="font-medium text-sm">
+                  {errorMessage || 'Error de conexion'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="mt-1 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+                >
+                  Reintentar
+                </button>
               </div>
             )}
 
