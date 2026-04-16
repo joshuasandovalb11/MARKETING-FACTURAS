@@ -1,5 +1,5 @@
 // src/hooks/useClients.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ApiSearchClient } from '../types';
 import { searchClientsByTerm } from '../services/clientApi';
@@ -11,15 +11,23 @@ export function useClients() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const requestSeqRef = useRef(0);
 
   const searchClients = useCallback(
     async (term: string) => {
-      if (term.trim().length < 2) {
+      const normalizedTerm = term.trim();
+
+      if (normalizedTerm.length < 2) {
+        requestSeqRef.current += 1;
         setResults([]);
+        setLoading(false);
         setError(false);
         setErrorMessage(null);
         return;
       }
+
+      const requestSeq = requestSeqRef.current + 1;
+      requestSeqRef.current = requestSeq;
 
       setLoading(true);
       setError(false);
@@ -27,13 +35,21 @@ export function useClients() {
 
       try {
         const data = await queryClient.fetchQuery({
-          queryKey: ['clientSearch', term],
-          queryFn: ({ signal }) => searchClientsByTerm(term, signal),
+          queryKey: ['clientSearch', normalizedTerm.toLowerCase()],
+          queryFn: ({ signal }) => searchClientsByTerm(normalizedTerm, signal),
           staleTime: 1000 * 60 * 5,
         });
 
+        if (requestSeq !== requestSeqRef.current) {
+          return;
+        }
+
         setResults(data);
       } catch (err) {
+        if (requestSeq !== requestSeqRef.current) {
+          return;
+        }
+
         console.error('Error buscando clientes:', err);
         setError(true);
         setErrorMessage(
@@ -44,14 +60,18 @@ export function useClients() {
           }).message
         );
       } finally {
-        setLoading(false);
+        if (requestSeq === requestSeqRef.current) {
+          setLoading(false);
+        }
       }
     },
     [queryClient]
   );
 
   const clearResults = useCallback(() => {
+    requestSeqRef.current += 1;
     setResults([]);
+    setLoading(false);
     setError(false);
     setErrorMessage(null);
   }, []);
