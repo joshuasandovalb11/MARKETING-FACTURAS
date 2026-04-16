@@ -36,6 +36,9 @@ export default function InvoiceDrawer({
 }: InvoiceDrawerProps) {
   const [expandedId, setExpandedId] = useState<string | number | null>(null);
   const { notify } = useNotificationToast();
+  const clientKey = client?.marketingData?.clienteId || client?.id || 'none';
+  const branchKey = client?.idSucursal ?? 'none';
+  const drawerContextKey = `${clientKey}:${branchKey}:${filters.startDate}:${filters.endDate}:${filters.idProveedor || 'all'}`;
 
   const {
     data: invoices,
@@ -72,7 +75,11 @@ export default function InvoiceDrawer({
   }).message;
 
   useEffect(() => {
-    if (!isError) return;
+    setExpandedId(null);
+  }, [drawerContextKey, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !isError) return;
 
     notify(
       resolveErrorMessageNotification({

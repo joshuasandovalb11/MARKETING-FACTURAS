@@ -1,5 +1,6 @@
 // src/hooks/useClientInvoices.ts
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Invoice } from '../types';
 import {
   buildInvoiceQueryKey,
@@ -25,16 +26,24 @@ export function useClientInvoices({
   isOpen,
   idProveedor,
 }: UseClientInvoicesProps) {
+  const queryClient = useQueryClient();
   const clientKey = clientId ?? null;
+  const queryKey = buildInvoiceQueryKey({
+    clientKey,
+    idSucursal,
+    startDate,
+    endDate,
+    idProveedor,
+  });
+
+  useEffect(() => {
+    if (isOpen) return;
+
+    void queryClient.cancelQueries({ queryKey });
+  }, [isOpen, queryClient, queryKey]);
 
   return useQuery<Invoice[]>({
-    queryKey: buildInvoiceQueryKey({
-      clientKey,
-      idSucursal,
-      startDate,
-      endDate,
-      idProveedor,
-    }),
+    queryKey,
     enabled: isOpen && !!clientId,
     staleTime: QUERY_TIMES.invoicesStale,
     gcTime: QUERY_TIMES.invoicesGc,
