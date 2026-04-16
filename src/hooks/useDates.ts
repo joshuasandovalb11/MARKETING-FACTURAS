@@ -6,10 +6,7 @@ import { resolveErrorNotification } from '../utils/notificationPolicy';
 export function useFechasDisponibles() {
   const { data, isLoading, isError, error, refetch } = useQuery<string[]>({
     queryKey: ['availableDates'],
-    queryFn: async ({ signal }) => {
-      const data = await fetchAvailableDates(signal);
-      return data as string[];
-    },
+    queryFn: ({ signal }) => fetchAvailableDates(signal),
     staleTime: QUERY_TIMES.staticCatalogStale,
     gcTime: QUERY_TIMES.staticCatalogGc,
     retry: QUERY_RETRY,

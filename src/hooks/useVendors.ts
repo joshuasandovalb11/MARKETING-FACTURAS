@@ -1,20 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchVendors } from '../services/catalogApi';
+import { fetchVendors, type CatalogVendor } from '../services/catalogApi';
 import { QUERY_RETRY, QUERY_TIMES } from '../utils/queryPolicies';
 import { resolveErrorNotification } from '../utils/notificationPolicy';
 
-export interface Vendor {
-  id: string;
-  nombre: string;
-}
+export type Vendor = CatalogVendor;
 
 export function useVendors() {
   const { data, isLoading, isError, error, refetch } = useQuery<Vendor[]>({
     queryKey: ['vendors'],
-    queryFn: async ({ signal }) => {
-      const data = await fetchVendors(signal);
-      return data as Vendor[];
-    },
+    queryFn: ({ signal }) => fetchVendors(signal),
     staleTime: QUERY_TIMES.staticCatalogStale,
     gcTime: QUERY_TIMES.staticCatalogGc,
     retry: QUERY_RETRY,

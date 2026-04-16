@@ -1,20 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchProveedores } from '../services/catalogApi';
+import {
+  fetchProveedores,
+  type CatalogProveedor,
+} from '../services/catalogApi';
 import { QUERY_RETRY, QUERY_TIMES } from '../utils/queryPolicies';
 import { resolveErrorNotification } from '../utils/notificationPolicy';
 
-export interface Proveedor {
-  id: string;
-  nombre: string;
-}
+export type Proveedor = CatalogProveedor;
 
 export function useProveedores() {
   const { data, isLoading, isError, error, refetch } = useQuery<Proveedor[]>({
     queryKey: ['proveedores'],
-    queryFn: async ({ signal }) => {
-      const data = await fetchProveedores(signal);
-      return data as Proveedor[];
-    },
+    queryFn: ({ signal }) => fetchProveedores(signal),
     staleTime: QUERY_TIMES.staticCatalogStale,
     gcTime: QUERY_TIMES.staticCatalogGc,
     retry: QUERY_RETRY,
