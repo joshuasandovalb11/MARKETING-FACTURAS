@@ -1,5 +1,6 @@
 import type { Client, Invoice } from '../types';
 import { requestJson } from './httpClient';
+import { logNormalizationStats } from '../utils/devDiagnostics';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -187,9 +188,17 @@ export async function fetchMarketingAnalysis({
     return [];
   }
 
-  return rows
+  const normalized = rows
     .map(normalizeAnalysisClient)
     .filter((item): item is Client => item !== null);
+
+  logNormalizationStats({
+    source: 'analisis',
+    total: rows.length,
+    kept: normalized.length,
+  });
+
+  return normalized;
 }
 
 interface ClientInvoicesParams {
@@ -228,7 +237,15 @@ export async function fetchClientInvoices({
     return [];
   }
 
-  return rows
+  const normalized = rows
     .map(normalizeInvoiceRow)
     .filter((item): item is Invoice => item !== null);
+
+  logNormalizationStats({
+    source: 'facturas/cliente',
+    total: rows.length,
+    kept: normalized.length,
+  });
+
+  return normalized;
 }

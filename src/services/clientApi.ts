@@ -1,5 +1,6 @@
 import type { ApiSearchClient } from '../types';
 import { requestJson } from './httpClient';
+import { logNormalizationStats } from '../utils/devDiagnostics';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -89,7 +90,15 @@ export async function searchClientsByTerm(
     return [];
   }
 
-  return rows
+  const normalized = rows
     .map(normalizeClientRow)
     .filter((item): item is ApiSearchClient => item !== null);
+
+  logNormalizationStats({
+    source: 'clientes/buscar',
+    total: rows.length,
+    kept: normalized.length,
+  });
+
+  return normalized;
 }

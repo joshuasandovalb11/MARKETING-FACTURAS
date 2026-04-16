@@ -1,5 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 import { requestJson } from './httpClient';
+import { logNormalizationStats } from '../utils/devDiagnostics';
 
 export interface CatalogVendor {
   id: string;
@@ -49,10 +50,18 @@ export async function fetchAvailableDates(
     return [];
   }
 
-  return json
+  const normalized = json
     .filter((item): item is string => typeof item === 'string')
     .map((date) => date.trim())
     .filter((date) => date.length > 0);
+
+  logNormalizationStats({
+    source: 'catalogos/fechas-disponibles',
+    total: json.length,
+    kept: normalized.length,
+  });
+
+  return normalized;
 }
 
 export async function fetchVendors(
@@ -70,9 +79,17 @@ export async function fetchVendors(
     return [];
   }
 
-  return json
+  const normalized = json
     .map(normalizeCatalogItem)
     .filter((item): item is CatalogVendor => item !== null);
+
+  logNormalizationStats({
+    source: 'catalogos/vendedores',
+    total: json.length,
+    kept: normalized.length,
+  });
+
+  return normalized;
 }
 
 export async function fetchProveedores(
@@ -90,7 +107,15 @@ export async function fetchProveedores(
     return [];
   }
 
-  return json
+  const normalized = json
     .map(normalizeCatalogItem)
     .filter((item): item is CatalogProveedor => item !== null);
+
+  logNormalizationStats({
+    source: 'catalogos/proveedores',
+    total: json.length,
+    kept: normalized.length,
+  });
+
+  return normalized;
 }
