@@ -1,4 +1,11 @@
-import { useCallback, useRef } from 'react';
+import {
+  createElement,
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useRef,
+} from 'react';
 import { toast } from 'sonner';
 import type { ResolvedNotification } from '../utils/notificationPolicy';
 
@@ -11,9 +18,19 @@ interface NotifyOptions {
   dedupeWindowMs?: number;
 }
 
-const DEFAULT_DEDUPE_WINDOW_MS = 1800;
+interface NotificationToastContextValue {
+  notify: (notification: ResolvedNotification, options?: NotifyOptions) => void;
+}
 
-export function useNotificationToast() {
+const DEFAULT_DEDUPE_WINDOW_MS = 1800;
+const NotificationToastContext =
+  createContext<NotificationToastContextValue | null>(null);
+
+export function NotificationToastProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const dedupeRef = useRef<Map<string, number>>(new Map());
 
   const notify = useCallback(
@@ -57,5 +74,21 @@ export function useNotificationToast() {
     []
   );
 
-  return { notify };
+  return createElement(
+    NotificationToastContext.Provider,
+    { value: { notify } },
+    children
+  );
+}
+
+export function useNotificationToast() {
+  const context = useContext(NotificationToastContext);
+
+  if (!context) {
+    throw new Error(
+      'useNotificationToast must be used within NotificationToastProvider'
+    );
+  }
+
+  return context;
 }

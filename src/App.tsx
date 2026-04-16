@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import Home from './pages/Home';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { NotificationToastProvider } from './hooks/useNotificationToast';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,12 +20,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Toaster position="bottom-right" richColors closeButton />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Home />} />
-          </Routes>
-        </BrowserRouter>
+        <NotificationToastProvider>
+          <Toaster position="bottom-right" richColors closeButton />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Home />} />
+            </Routes>
+          </BrowserRouter>
+        </NotificationToastProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
