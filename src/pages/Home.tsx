@@ -175,11 +175,18 @@ export default function Home() {
     updateFilters({ idProveedor: proveedorId });
 
   const handleRefresh = () => {
+    const hadActiveContext = hasActiveFilters || Boolean(selectedClient);
+
     setSearchParams({});
     setSelectedClient(null);
     setIsInvoiceDrawerOpen(false);
 
-    notify(resolveEventNotification('filters-reset'));
+    notify(
+      resolveEventNotification(
+        hadActiveContext ? 'filters-reset' : 'filters-reset-empty'
+      ),
+      { bypassDedupe: true }
+    );
   };
 
   return (

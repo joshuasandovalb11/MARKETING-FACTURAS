@@ -15,6 +15,7 @@ export type EventNotificationScope =
   | 'network-offline'
   | 'network-online'
   | 'filters-reset'
+  | 'filters-reset-empty'
   | 'session-message';
 
 export interface ResolvedNotification {
@@ -57,6 +58,11 @@ const EVENT_SCOPE_POLICY: Record<
     channel: 'toast',
     level: 'success',
     defaultMessage: 'Filtros restablecidos',
+  },
+  'filters-reset-empty': {
+    channel: 'toast',
+    level: 'info',
+    defaultMessage: 'No hay filtros activos para limpiar.',
   },
   'session-message': {
     channel: 'toast',
