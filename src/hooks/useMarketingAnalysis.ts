@@ -1,5 +1,5 @@
 // src/hooks/useMarketingAnalysis.ts
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type { Client } from '../types';
 import { buildAsyncViewState } from '../utils/asyncViewState';
 import {
@@ -51,7 +51,6 @@ export function useMarketingAnalysis({
     retry: QUERY_RETRY,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
-    placeholderData: keepPreviousData,
 
     queryFn: async ({ signal }) => {
       const rawData: Client[] = await fetchMarketingAnalysis({
