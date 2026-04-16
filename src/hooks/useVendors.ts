@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { fetchVendors } from '../services/catalogApi';
+import { QUERY_RETRY, QUERY_TIMES } from '../utils/queryPolicies';
+import { resolveErrorNotification } from '../utils/notificationPolicy';
 
 export interface Vendor {
   id: string;
@@ -8,21 +9,32 @@ export interface Vendor {
 }
 
 export function useVendors() {
-  const { data, isLoading, isError, refetch } = useQuery<Vendor[]>({
+  const { data, isLoading, isError, error, refetch } = useQuery<Vendor[]>({
     queryKey: ['vendors'],
-    queryFn: async () => {
-      const response = await fetch(`${API_BASE_URL}/catalogos/vendedores`);
-      if (!response.ok) throw new Error('Error al cargar vendedores');
-      const json = await response.json();
-      return Array.isArray(json) ? json : [];
+    queryFn: async ({ signal }) => {
+      const data = await fetchVendors(signal);
+      return data as Vendor[];
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: QUERY_TIMES.staticCatalogStale,
+    gcTime: QUERY_TIMES.staticCatalogGc,
+    retry: QUERY_RETRY,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+    select: (vendors) =>
+      [...vendors].sort((a, b) => a.nombre.localeCompare(b.nombre)),
   });
 
   return {
     vendors: data || [],
     loading: isLoading,
     error: isError,
+    errorMessage: isError
+      ? resolveErrorNotification({
+          scope: 'vendors-picker',
+          error,
+          fallback: 'No se pudieron cargar los vendedores.',
+        }).message
+      : null,
     fetchVendors: refetch,
   };
 }

@@ -1,8 +1,12 @@
 // src/hooks/useClientInvoices.ts
 import { useQuery } from '@tanstack/react-query';
 import type { Invoice } from '../types';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import {
+  buildInvoiceQueryKey,
+  QUERY_RETRY,
+  QUERY_TIMES,
+} from '../utils/queryPolicies';
+import { fetchClientInvoices } from '../services/marketingApi';
 
 interface UseClientInvoicesProps {
   clientId: string | number | undefined;
@@ -21,34 +25,31 @@ export function useClientInvoices({
   isOpen,
   idProveedor,
 }: UseClientInvoicesProps) {
+  const clientKey = clientId ?? null;
+
   return useQuery<Invoice[]>({
-    queryKey: [
-      'invoices',
-      clientId,
+    queryKey: buildInvoiceQueryKey({
+      clientKey,
       idSucursal,
       startDate,
       endDate,
       idProveedor,
-    ],
+    }),
     enabled: isOpen && !!clientId,
-    staleTime: 1000 * 60 * 5,
+    staleTime: QUERY_TIMES.invoicesStale,
+    gcTime: QUERY_TIMES.invoicesGc,
+    retry: QUERY_RETRY,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
 
-    queryFn: async () => {
-      const params = new URLSearchParams();
-
-      if (idSucursal !== undefined)
-        params.append('idSucursal', String(idSucursal));
-      if (startDate) params.append('fechaInicio', startDate);
-      if (endDate) params.append('fechaFin', endDate);
-      if (idProveedor) params.append('idProveedor', idProveedor);
-
-      const response = await fetch(
-        `${API_BASE_URL}/facturas/cliente/${clientId}?${params.toString()}`
-      );
-
-      if (!response.ok)
-        throw new Error('Error al cargar el detalle de facturas');
-      return response.json();
-    },
+    queryFn: ({ signal }) =>
+      fetchClientInvoices({
+        clientId: clientId as string | number,
+        idSucursal,
+        startDate,
+        endDate,
+        idProveedor,
+        signal,
+      }),
   });
 }

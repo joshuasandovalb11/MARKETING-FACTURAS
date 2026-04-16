@@ -2,35 +2,33 @@
 import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ApiSearchClient } from '../types';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { searchClientsByTerm } from '../services/clientApi';
+import { resolveErrorNotification } from '../utils/notificationPolicy';
 
 export function useClients() {
   const queryClient = useQueryClient();
   const [results, setResults] = useState<ApiSearchClient[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const searchClients = useCallback(
     async (term: string) => {
       if (term.trim().length < 2) {
         setResults([]);
+        setError(false);
+        setErrorMessage(null);
         return;
       }
 
       setLoading(true);
       setError(false);
+      setErrorMessage(null);
 
       try {
         const data = await queryClient.fetchQuery({
           queryKey: ['clientSearch', term],
-          queryFn: async () => {
-            const response = await fetch(
-              `${API_BASE_URL}/clientes/buscar?q=${encodeURIComponent(term)}`
-            );
-            if (!response.ok) throw new Error('Error buscando clientes');
-            return await response.json();
-          },
+          queryFn: ({ signal }) => searchClientsByTerm(term, signal),
           staleTime: 1000 * 60 * 5,
         });
 
@@ -38,6 +36,13 @@ export function useClients() {
       } catch (err) {
         console.error('Error buscando clientes:', err);
         setError(true);
+        setErrorMessage(
+          resolveErrorNotification({
+            scope: 'client-search',
+            error: err,
+            fallback: 'Error de conexion al buscar clientes.',
+          }).message
+        );
       } finally {
         setLoading(false);
       }
@@ -47,7 +52,16 @@ export function useClients() {
 
   const clearResults = useCallback(() => {
     setResults([]);
+    setError(false);
+    setErrorMessage(null);
   }, []);
 
-  return { results, loading, error, searchClients, clearResults };
+  return {
+    results,
+    loading,
+    error,
+    errorMessage,
+    searchClients,
+    clearResults,
+  };
 }

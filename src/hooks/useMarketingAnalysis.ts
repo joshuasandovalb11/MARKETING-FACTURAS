@@ -1,6 +1,14 @@
 // src/hooks/useMarketingAnalysis.ts
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { Client } from '../types';
+import { buildAsyncViewState } from '../utils/asyncViewState';
+import {
+  buildAnalysisQueryKey,
+  QUERY_RETRY,
+  QUERY_TIMES,
+} from '../utils/queryPolicies';
+import { fetchMarketingAnalysis } from '../services/marketingApi';
+import { resolveErrorNotification } from '../utils/notificationPolicy';
 
 interface UseMarketingAnalysisProps {
   filters: {
@@ -18,45 +26,42 @@ export function useMarketingAnalysis({
   selectedClient,
   hasActiveFilters,
 }: UseMarketingAnalysisProps) {
-  const { data, isLoading, error } = useQuery<Client[]>({
-    queryKey: ['analysis', filters, selectedClient?.id],
+  const isQueryEnabled = hasActiveFilters || !!selectedClient;
+  const selectedClientKey =
+    selectedClient?.marketingData?.clienteId ?? selectedClient?.id ?? null;
+  const selectedBranchKey =
+    selectedClient?.idSucursal ?? selectedClient?.id ?? null;
 
-    enabled: hasActiveFilters || !!selectedClient,
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery<
+    Client[]
+  >({
+    queryKey: buildAnalysisQueryKey({
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      vendor: filters.vendor,
+      idProveedor: filters.idProveedor,
+      selectedClientKey,
+      selectedBranchKey,
+    }),
 
-    staleTime: 1000 * 60 * 5,
+    enabled: isQueryEnabled,
+
+    staleTime: QUERY_TIMES.analysisStale,
+    gcTime: QUERY_TIMES.analysisGc,
+    retry: QUERY_RETRY,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+    placeholderData: keepPreviousData,
 
     queryFn: async ({ signal }) => {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-      const params: Record<string, string> = {};
-
-      if (filters.startDate && filters.endDate) {
-        params.fechaInicio = filters.startDate;
-        params.fechaFin = filters.endDate;
-      }
-      if (filters.vendor && filters.vendor !== 'all') {
-        params.vendedor = filters.vendor;
-      }
-      if (filters.idProveedor && filters.idProveedor !== 'all') {
-        params.idProveedor = filters.idProveedor;
-      }
-      if (selectedClient) {
-        const clientId =
-          selectedClient.marketingData?.clienteId || selectedClient.id;
-        params.idCliente = String(clientId);
-        if (typeof selectedClient.idSucursal === 'number') {
-          params.idSucursal = String(selectedClient.idSucursal);
-        }
-      }
-
-      const queryParams = new URLSearchParams(params).toString();
-
-      const response = await fetch(`${API_BASE_URL}/analisis?${queryParams}`, {
+      const rawData: Client[] = await fetchMarketingAnalysis({
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        vendor: filters.vendor,
+        idProveedor: filters.idProveedor,
+        selectedClient,
         signal,
       });
-
-      if (!response.ok) throw new Error('Respuesta no exitosa del servidor');
-
-      const rawData: Client[] = await response.json();
 
       const branchCountMap = new Map<string | number, number>();
       rawData.forEach((item: Client) => {
@@ -76,7 +81,16 @@ export function useMarketingAnalysis({
           selectedClient &&
           String(cId) === String(selectedClient.marketingData?.clienteId)
         ) {
-          if (String(item.id) === String(selectedClient.id)) {
+          const selectedSucursal = selectedClient.idSucursal;
+          const itemSucursal = item.idSucursal;
+
+          const isSelectedBranch =
+            typeof selectedSucursal === 'number' &&
+            typeof itemSucursal === 'number'
+              ? String(itemSucursal) === String(selectedSucursal)
+              : String(item.id) === String(selectedClient.id);
+
+          if (isSelectedBranch) {
             finalBranchName = selectedClient.branchName || '';
           }
         } else if (isMatriz) {
@@ -93,9 +107,31 @@ export function useMarketingAnalysis({
     },
   });
 
+  const mapClients = data || [];
+  const hasData = mapClients.length > 0;
+  const analysisViewState = buildAsyncViewState({
+    enabled: isQueryEnabled,
+    hasData,
+    isLoading,
+    isFetching,
+    isError,
+  });
+
   return {
-    mapClients: data || [],
-    isDataLoading: isLoading,
-    fetchError: error ? error.message : null,
+    mapClients,
+    analysisViewState,
+    isInitialLoading: analysisViewState === 'loading-initial',
+    isRefreshing: analysisViewState === 'loading-refresh',
+    isEmpty: analysisViewState === 'success-empty',
+    hasData,
+    hasError: analysisViewState === 'error-recoverable',
+    fetchError: error
+      ? resolveErrorNotification({
+          scope: 'analysis-map',
+          error,
+          fallback: 'No se pudo cargar el analisis de clientes.',
+        }).message
+      : null,
+    refetchAnalysis: refetch,
   };
 }
