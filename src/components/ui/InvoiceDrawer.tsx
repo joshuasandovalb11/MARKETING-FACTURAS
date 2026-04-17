@@ -14,7 +14,7 @@ interface InvoiceDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   client: Client | null;
-  filters: { startDate: string; endDate: string; idProveedor?: string };
+  filters: { startDate: string; endDate: string; idProveedorIds: string[] };
 }
 
 const cap = (s?: string | null) =>
@@ -38,7 +38,7 @@ export default function InvoiceDrawer({
   const { notify } = useNotificationToast();
   const clientKey = client?.marketingData?.clienteId || client?.id || 'none';
   const branchKey = client?.idSucursal ?? 'none';
-  const drawerContextKey = `${clientKey}:${branchKey}:${filters.startDate}:${filters.endDate}:${filters.idProveedor || 'all'}`;
+  const drawerContextKey = `${clientKey}:${branchKey}:${filters.startDate}:${filters.endDate}:${filters.idProveedorIds.join(',') || 'all'}`;
 
   const {
     data: invoices,
@@ -52,7 +52,7 @@ export default function InvoiceDrawer({
     startDate: filters.startDate,
     endDate: filters.endDate,
     isOpen,
-    idProveedor: filters.idProveedor,
+    idProveedorIds: filters.idProveedorIds,
   });
 
   const toggle = (id: string | number) =>

@@ -141,7 +141,7 @@ interface MarketingAnalysisParams {
   startDate: string;
   endDate: string;
   vendor: string;
-  idProveedor: string;
+  idProveedorIds: string[];
   selectedClient: Client | null;
   signal?: AbortSignal;
 }
@@ -150,32 +150,34 @@ export async function fetchMarketingAnalysis({
   startDate,
   endDate,
   vendor,
-  idProveedor,
+  idProveedorIds,
   selectedClient,
   signal,
 }: MarketingAnalysisParams) {
-  const params: Record<string, string> = {};
+  const params = new URLSearchParams();
 
   if (startDate && endDate) {
-    params.fechaInicio = startDate;
-    params.fechaFin = endDate;
+    params.append('fechaInicio', startDate);
+    params.append('fechaFin', endDate);
   }
   if (vendor && vendor !== 'all') {
-    params.vendedor = vendor;
+    params.append('vendedor', vendor);
   }
-  if (idProveedor && idProveedor !== 'all') {
-    params.idProveedor = idProveedor;
+  if (idProveedorIds.length > 0) {
+    idProveedorIds.forEach((idProveedor) => {
+      params.append('idProveedor', idProveedor);
+    });
   }
   if (selectedClient) {
     const clientId =
       selectedClient.marketingData?.clienteId || selectedClient.id;
-    params.idCliente = String(clientId);
+    params.append('idCliente', String(clientId));
     if (typeof selectedClient.idSucursal === 'number') {
-      params.idSucursal = String(selectedClient.idSucursal);
+      params.append('idSucursal', String(selectedClient.idSucursal));
     }
   }
 
-  const queryParams = new URLSearchParams(params).toString();
+  const queryParams = params.toString();
   const rows = await requestJson<unknown[]>(
     `${API_BASE_URL}/analisis?${queryParams}`,
     {
@@ -206,7 +208,7 @@ interface ClientInvoicesParams {
   idSucursal: number | undefined;
   startDate: string;
   endDate: string;
-  idProveedor?: string;
+  idProveedorIds?: string[];
   signal?: AbortSignal;
 }
 
@@ -215,7 +217,7 @@ export async function fetchClientInvoices({
   idSucursal,
   startDate,
   endDate,
-  idProveedor,
+  idProveedorIds,
   signal,
 }: ClientInvoicesParams) {
   const params = new URLSearchParams();
@@ -223,7 +225,11 @@ export async function fetchClientInvoices({
   if (idSucursal !== undefined) params.append('idSucursal', String(idSucursal));
   if (startDate) params.append('fechaInicio', startDate);
   if (endDate) params.append('fechaFin', endDate);
-  if (idProveedor) params.append('idProveedor', idProveedor);
+  if (idProveedorIds && idProveedorIds.length > 0) {
+    idProveedorIds.forEach((idProveedor) => {
+      params.append('idProveedor', idProveedor);
+    });
+  }
 
   const rows = await requestJson<unknown[]>(
     `${API_BASE_URL}/facturas/cliente/${clientId}?${params.toString()}`,

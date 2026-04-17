@@ -9,20 +9,30 @@ export const QUERY_TIMES = {
 
 export const QUERY_RETRY = 1;
 
+function normalizeProviderIds(ids: string[] | undefined) {
+  if (!ids || ids.length === 0) return [] as string[];
+
+  return Array.from(
+    new Set(ids.map((id) => String(id).trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+}
+
 export function buildAnalysisQueryKey(params: {
   startDate: string;
   endDate: string;
   vendor: string;
-  idProveedor: string;
+  idProveedorIds: string[];
   selectedClientKey: string | number | null;
   selectedBranchKey: string | number | null;
 }) {
+  const providerKey = normalizeProviderIds(params.idProveedorIds).join(',');
+
   return [
     'analysis',
     params.startDate || '',
     params.endDate || '',
     params.vendor || '',
-    params.idProveedor || '',
+    providerKey,
     params.selectedClientKey ? String(params.selectedClientKey) : 'none',
     params.selectedBranchKey ? String(params.selectedBranchKey) : 'none',
   ] as const;
@@ -33,14 +43,16 @@ export function buildInvoiceQueryKey(params: {
   idSucursal?: number;
   startDate: string;
   endDate: string;
-  idProveedor?: string;
+  idProveedorIds?: string[];
 }) {
+  const providerKey = normalizeProviderIds(params.idProveedorIds).join(',');
+
   return [
     'invoices',
     params.clientKey ? String(params.clientKey) : 'none',
     params.idSucursal ?? 'none',
     params.startDate || '',
     params.endDate || '',
-    params.idProveedor || '',
+    providerKey,
   ] as const;
 }

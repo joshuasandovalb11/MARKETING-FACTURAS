@@ -15,7 +15,7 @@ interface UseClientInvoicesProps {
   startDate: string;
   endDate: string;
   isOpen: boolean;
-  idProveedor?: string;
+  idProveedorIds?: string[];
 }
 
 export function useClientInvoices({
@@ -24,7 +24,7 @@ export function useClientInvoices({
   startDate,
   endDate,
   isOpen,
-  idProveedor,
+  idProveedorIds,
 }: UseClientInvoicesProps) {
   const queryClient = useQueryClient();
   const clientKey = clientId ?? null;
@@ -33,7 +33,7 @@ export function useClientInvoices({
     idSucursal,
     startDate,
     endDate,
-    idProveedor,
+    idProveedorIds,
   });
 
   useEffect(() => {
@@ -57,7 +57,7 @@ export function useClientInvoices({
         idSucursal,
         startDate,
         endDate,
-        idProveedor,
+        idProveedorIds,
         signal,
       }),
   });

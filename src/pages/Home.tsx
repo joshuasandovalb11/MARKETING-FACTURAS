@@ -26,6 +26,29 @@ import {
   resolveEventNotification,
 } from '../utils/notificationPolicy';
 
+function normalizeProviderIds(ids: string[]) {
+  return Array.from(new Set(ids.map((id) => id.trim()).filter(Boolean))).sort(
+    (a, b) => a.localeCompare(b)
+  );
+}
+
+function readProviderIdsFromParams(searchParams: URLSearchParams) {
+  const repeated = searchParams.getAll('idProveedor');
+  const rawValues =
+    repeated.length > 0 ? repeated : [searchParams.get('idProveedor') || ''];
+
+  return normalizeProviderIds(
+    rawValues.flatMap((value) =>
+      value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+type FilterUpdateValue = string | string[];
+
 export default function Home() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -44,21 +67,36 @@ export default function Home() {
       endDate: searchParams.get('endDate') || '',
       vendor: searchParams.get('vendor') || '',
       status: searchParams.get('status') || '',
-      idProveedor: searchParams.get('idProveedor') || '',
+      idProveedorIds: readProviderIdsFromParams(searchParams),
     }),
     [searchParams]
   );
 
-  const updateFilters = (newValues: Record<string, string>) => {
+  const updateFilters = (newValues: Record<string, FilterUpdateValue>) => {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev);
+
       Object.entries(newValues).forEach(([key, value]) => {
-        if (value) {
+        if (key === 'idProveedor') {
+          params.delete(key);
+
+          if (Array.isArray(value)) {
+            const providerIds = normalizeProviderIds(value);
+            providerIds.forEach((id) => {
+              params.append(key, id);
+            });
+          }
+
+          return;
+        }
+
+        if (typeof value === 'string' && value) {
           params.set(key, value);
         } else {
           params.delete(key);
         }
       });
+
       return params;
     });
   };
@@ -66,7 +104,7 @@ export default function Home() {
   const hasActiveFilters = Boolean(
     (filters.startDate && filters.endDate) ||
     filters.vendor !== '' ||
-    filters.idProveedor !== '' ||
+    filters.idProveedorIds.length > 0 ||
     (filters.status !== '' && filters.status !== 'all')
   );
 
@@ -175,9 +213,9 @@ export default function Home() {
     updateFilters({ vendor: vendorCode });
   };
 
-  const handleProveedorSelect = (proveedorId: string) => {
+  const handleProveedorSelect = (proveedorIds: string[]) => {
     setSelectedClient(null);
-    updateFilters({ idProveedor: proveedorId });
+    updateFilters({ idProveedor: proveedorIds });
   };
 
   const handleRefresh = () => {
@@ -258,8 +296,8 @@ export default function Home() {
             {/* 3. PROVEEDORES */}
             <FilterSection title="PROVEEDORES">
               <ProveedorPicker
-                selectedProveedor={filters.idProveedor}
-                onSelect={handleProveedorSelect}
+                selectedProveedores={filters.idProveedorIds}
+                onChange={handleProveedorSelect}
               />
             </FilterSection>
 
@@ -290,7 +328,7 @@ export default function Home() {
                 onSelect={(client) => {
                   setSelectedClient(client);
                   if (client) {
-                    updateFilters({ vendor: '', idProveedor: '' });
+                    updateFilters({ vendor: '', idProveedor: [] });
                   }
                 }}
               />
