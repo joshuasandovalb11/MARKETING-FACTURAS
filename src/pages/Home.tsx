@@ -346,6 +346,10 @@ export default function Home() {
               errorMessage={hasError ? fetchError : null}
               onRetry={refetchAnalysis}
               filterHash={filterHash}
+              visitFilters={{
+                startDate: filters.startDate,
+                endDate: filters.endDate,
+              }}
               onOpenInvoices={(client) => {
                 setInvoiceClient(client);
                 setIsInvoiceDrawerOpen(true);

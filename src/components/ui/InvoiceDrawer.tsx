@@ -1,14 +1,21 @@
 // src/components/ui/InvoiceDrawer.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown, Package, Building2 } from 'lucide-react';
 import type { Client } from '../../types';
 import { useClientInvoices } from '../../hooks/useClientInvoices';
+import { useClientVisits } from '../../hooks/useClientVisits';
+import VisitsTimeline from './VisitsTimeLine';
 import {
   resolveErrorMessageNotification,
   resolveErrorNotification,
 } from '../../utils/notificationPolicy';
 import { useNotificationToast } from '../../hooks/useNotificationToast';
+import {
+  isFieldSaleInvoice,
+  formatVendorTag,
+  formatLastVisitSummary,
+} from '../../utils/visitInsights';
 
 interface InvoiceDrawerProps {
   isOpen: boolean;
@@ -35,10 +42,21 @@ export default function InvoiceDrawer({
   filters,
 }: InvoiceDrawerProps) {
   const [expandedId, setExpandedId] = useState<string | number | null>(null);
+  const [activeTab, setActiveTab] = useState<'invoices' | 'visits'>('invoices');
   const { notify } = useNotificationToast();
   const clientKey = client?.marketingData?.clienteId || client?.id || 'none';
   const branchKey = client?.idSucursal ?? 'none';
   const drawerContextKey = `${clientKey}:${branchKey}:${filters.startDate}:${filters.endDate}:${filters.idProveedorIds.join(',') || 'all'}`;
+
+  const { visitsData, isLoadingVisits, visitsError, refetchVisits } =
+    useClientVisits({
+      client,
+      filters: {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      },
+    });
+  const historialVisitas = visitsData?.historialVisitas || [];
 
   const {
     data: invoices,
@@ -68,6 +86,11 @@ export default function InvoiceDrawer({
       ?.filter((i) => i.moneda.startsWith('D') || i.moneda.startsWith('U'))
       .reduce((s, i) => s + i.total, 0) || 0;
 
+  const ultimaVisita = visitsData?.ultimaVisitaAbsoluta ?? null;
+  const ultimaVisitaLabel = isLoadingVisits
+    ? 'Cargando...'
+    : formatLastVisitSummary(ultimaVisita);
+
   const invoiceErrorMessage = resolveErrorNotification({
     scope: 'invoice-drawer',
     error,
@@ -76,6 +99,7 @@ export default function InvoiceDrawer({
 
   useEffect(() => {
     setExpandedId(null);
+    setActiveTab('invoices');
   }, [drawerContextKey, isOpen]);
 
   useEffect(() => {
@@ -89,6 +113,15 @@ export default function InvoiceDrawer({
       })
     );
   }, [isError, invoiceErrorMessage, notify]);
+
+  const invoicesWithChannel = useMemo(
+    () =>
+      (invoices || []).map((invoice) => ({
+        ...invoice,
+        isFieldSale: isFieldSaleInvoice(invoice.fecha, historialVisitas),
+      })),
+    [historialVisitas, invoices]
+  );
 
   return (
     <AnimatePresence>
@@ -125,6 +158,9 @@ export default function InvoiceDrawer({
                     {cap(client.branchName)}
                   </p>
                 )}
+                <p className="text-[11px] text-slate-600 font-medium truncate mt-1">
+                  {formatVendorTag(client.vendor)} | {ultimaVisitaLabel}
+                </p>
               </div>
               <button
                 onClick={onClose}
@@ -134,9 +170,62 @@ export default function InvoiceDrawer({
               </button>
             </div>
 
+            <div className="px-4 py-2 border-b border-slate-100 bg-white">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('invoices')}
+                  className={`flex items-center justify-center gap-2 rounded-md py-2 text-xs font-bold transition-colors cursor-pointer border ${
+                    activeTab === 'invoices'
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  Facturas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('visits')}
+                  className={`flex items-center justify-center gap-2 rounded-md py-2 text-xs font-bold transition-colors cursor-pointer border ${
+                    activeTab === 'visits'
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  Visitas
+                </button>
+              </div>
+            </div>
+
             {/* BODY */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
-              {isLoading ? (
+              {activeTab === 'visits' ? (
+                <div className="flex flex-col h-full">
+                  {visitsError ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-2 px-4 py-8 text-center">
+                      <p className="text-xs text-red-400">
+                        No se pudieron cargar las visitas GPS.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void refetchVisits();
+                        }}
+                        className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+                      >
+                        Reintentar
+                      </button>
+                    </div>
+                  ) : isLoadingVisits ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
+                      <div className="w-5 h-5 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                      <p className="text-xs">Cargando visitas GPS...</p>
+                    </div>
+                  ) : (
+                    <VisitsTimeline visitas={historialVisitas} />
+                  )}
+                </div>
+              ) : isLoading ? (
                 <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
                   <div className="w-5 h-5 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
                   <p className="text-xs">Cargando...</p>
@@ -156,9 +245,9 @@ export default function InvoiceDrawer({
                     Reintentar
                   </button>
                 </div>
-              ) : invoices && invoices.length > 0 ? (
+              ) : invoicesWithChannel.length > 0 ? (
                 <div className="divide-y divide-slate-100">
-                  {invoices.map((inv) => {
+                  {invoicesWithChannel.map((inv) => {
                     const isOpen = expandedId === inv.idFactura;
                     const totalUnidades = inv.articulos.reduce(
                       (s, a) => s + a.cantidad,
@@ -181,6 +270,27 @@ export default function InvoiceDrawer({
                           </motion.div>
 
                           <div className="flex-1 min-w-0">
+                            {/* ROW DE CANAL: CAMPO / REMOTA */}
+                            <div className="flex mb-1 justify-end">
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                                  isLoadingVisits
+                                    ? 'bg-slate-100 text-slate-400'
+                                    : inv.isFieldSale
+                                      ? 'text-emerald-700'
+                                      : 'text-blue-700'
+                                }`}
+                              >
+                                {isLoadingVisits ? (
+                                  <span>Analizando...</span>
+                                ) : inv.isFieldSale ? (
+                                  <>Campo</>
+                                ) : (
+                                  <>Remota</>
+                                )}
+                              </span>
+                            </div>
+
                             {/* ROW SUPERIOR: ID de Factura + Fecha */}
                             <div className="flex items-baseline justify-between gap-2">
                               <div className="flex items-center gap-2">
@@ -198,6 +308,7 @@ export default function InvoiceDrawer({
                                   )}
                                 </span>
                               </div>
+
                               <span className="text-xs font-bold text-slate-800 shrink-0">
                                 $
                                 {inv.total.toLocaleString('es-MX', {

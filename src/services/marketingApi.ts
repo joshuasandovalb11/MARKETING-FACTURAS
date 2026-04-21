@@ -1,4 +1,10 @@
-import type { Client, Invoice } from '../types';
+import type {
+  Client,
+  Invoice,
+  VisitaGPS,
+  UltimaVisita,
+  ClientVisitsResponse,
+} from '../types';
 import { requestJson } from './httpClient';
 import { logNormalizationStats } from '../utils/devDiagnostics';
 
@@ -137,6 +143,67 @@ function normalizeInvoiceRow(row: unknown): Invoice | null {
   };
 }
 
+function normalizeVisitaGPS(row: unknown): VisitaGPS | null {
+  if (!isRecord(row)) return null;
+
+  const fecha = readString(row.fecha);
+  const vendedorId = readString(row.vendedorId);
+  const placa = readString(row.placa);
+  const horaLlegada = readString(row.horaLlegada);
+  const horaSalida = readString(row.horaSalida);
+  const duracionMinutos = readNumber(row.duracionMinutos);
+  const distanciaMetros = readNumber(row.distanciaMetros);
+
+  if (
+    !fecha ||
+    !vendedorId ||
+    !horaLlegada ||
+    !horaSalida ||
+    duracionMinutos === null ||
+    distanciaMetros === null
+  ) {
+    return null;
+  }
+
+  return {
+    fecha,
+    vendedorId,
+    placa: placa || 'Desconocida',
+    horaLlegada,
+    horaSalida,
+    duracionMinutos,
+    distanciaMetros,
+  };
+}
+
+function normalizeUltimaVisita(row: unknown): UltimaVisita | null {
+  if (!isRecord(row)) return null;
+
+  const fecha = readString(row.fecha);
+  const id_vendedor = readString(row.id_vendedor);
+
+  if (!fecha || !id_vendedor) return null;
+
+  return { fecha, id_vendedor };
+}
+
+function normalizeClientVisitsResponse(data: unknown): ClientVisitsResponse {
+  if (!isRecord(data)) {
+    return { historialVisitas: [], ultimaVisitaAbsoluta: null };
+  }
+
+  const rawHistorial = Array.isArray(data.historialVisitas)
+    ? data.historialVisitas
+    : [];
+
+  return {
+    historialVisitas: rawHistorial
+      .map(normalizeVisitaGPS)
+      .filter((v): v is VisitaGPS => v !== null),
+    ultimaVisitaAbsoluta: normalizeUltimaVisita(data.ultimaVisitaAbsoluta),
+  };
+}
+
 interface MarketingAnalysisParams {
   startDate: string;
   endDate: string;
@@ -251,6 +318,52 @@ export async function fetchClientInvoices({
     source: 'facturas/cliente',
     total: rows.length,
     kept: normalized.length,
+  });
+
+  return normalized;
+}
+
+interface ClientVisitsParams {
+  clientId: string | number;
+  lat: number;
+  lng: number;
+  startDate: string;
+  endDate: string;
+  signal?: AbortSignal;
+}
+
+export async function fetchClientVisits({
+  clientId,
+  lat,
+  lng,
+  startDate,
+  endDate,
+  signal,
+}: ClientVisitsParams) {
+  const baseId = String(clientId).split('_')[0];
+
+  const params = new URLSearchParams();
+  params.append('lat', String(lat));
+  params.append('lng', String(lng));
+  if (startDate) params.append('fechaInicio', startDate);
+  if (endDate) params.append('fechaFin', endDate);
+
+  const rawData = await requestJson<unknown>(
+    `${API_BASE_URL}/visitas/cliente/${baseId}?${params.toString()}`,
+    {
+      signal,
+      timeoutMs: 15000,
+    }
+  );
+
+  const normalized = normalizeClientVisitsResponse(rawData);
+
+  logNormalizationStats({
+    source: 'visitas/cliente',
+    total: Array.isArray((rawData as any)?.historialVisitas)
+      ? (rawData as any).historialVisitas.length
+      : 0,
+    kept: normalized.historialVisitas.length,
   });
 
   return normalized;

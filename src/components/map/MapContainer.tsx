@@ -10,6 +10,11 @@ import type { Client } from '../../types';
 import LoadingLayer from '../ui/feedback/LoadingLayer';
 import RefreshingMask from '../ui/feedback/RefreshingMask';
 import RecoverableErrorBanner from '../ui/feedback/RecoverableErrorBanner';
+import { useClientVisits } from '../../hooks/useClientVisits';
+import {
+  formatLastVisitSummary,
+  formatVendorTag,
+} from '../../utils/visitInsights';
 
 interface MapProps {
   clients: Client[];
@@ -20,6 +25,7 @@ interface MapProps {
   onRetry?: () => void;
   onOpenInvoices?: (client: Client) => void;
   filterHash?: string;
+  visitFilters: { startDate: string; endDate: string };
 }
 
 const containerStyle = {
@@ -56,6 +62,7 @@ export default function MapContainer({
   onRetry,
   onOpenInvoices,
   filterHash,
+  visitFilters,
 }: MapProps) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -64,6 +71,10 @@ export default function MapContainer({
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const { visitsData, isLoadingVisits } = useClientVisits({
+    client: selectedClient,
+    filters: visitFilters,
+  });
 
   useEffect(() => {
     setSelectedClient(null);
@@ -187,7 +198,7 @@ export default function MapContainer({
             position={{ lat: selectedClient.lat, lng: selectedClient.lng }}
             onCloseClick={() => setSelectedClient(null)}
           >
-            <div className="min-w-40 max-w-50">
+            <div className="min-w-48 max-w-56">
               <p className="text-[13px] font-bold text-gray-900">
                 #{selectedClient.marketingData?.clienteId || selectedClient.id}
               </p>
@@ -206,17 +217,18 @@ export default function MapContainer({
 
               {/* GIRO COMERCIAL */}
               {selectedClient.giroComercial && (
-                <p className="text-[10px] font-bold text-slate-500 mt-1.5 tracking-wider uppercase">
+                <p className="text-[10px] font-bold text-slate-500 mt-1 tracking-wider uppercase">
                   {selectedClient.giroComercial}
                 </p>
               )}
 
-              <div className="border-t border-gray-200 my-2"></div>
+              <div className="border-t border-gray-200 my-2.5"></div>
 
-              <div className="space-y-1.5">
+              {/* INFORMACIÓN ESTRUCTURADA */}
+              <div className="space-y-1">
                 {/* ESTADO */}
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-700">Estado:</span>
+                  <span className="text-gray-700 font-medium">Estado:</span>
                   <span
                     className={`font-bold ${
                       selectedClient.marketingData?.status === 'activo'
@@ -228,18 +240,26 @@ export default function MapContainer({
                   </span>
                 </div>
 
+                {/* VENDEDOR */}
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-700 font-medium">Vendedor:</span>
+                  <span className="font-semibold text-gray-900">
+                    {formatVendorTag(selectedClient.vendor)}
+                  </span>
+                </div>
+
                 {/* NÚMERO DE FACTURAS */}
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-800"># Facturas:</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-gray-700 font-medium"># Facturas:</span>
+                  <span className="font-semibold text-gray-900">
                     {selectedClient.marketingData?.ordersCount || 0}
                   </span>
                 </div>
 
                 {/* TOTAL MXN */}
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-800">Total MXN:</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-gray-700 font-medium">Total MXN:</span>
+                  <span className="font-semibold text-gray-900">
                     $
                     {selectedClient.marketingData?.totalSpentMXN.toLocaleString(
                       'es-MX'
@@ -249,12 +269,26 @@ export default function MapContainer({
 
                 {/* TOTAL USD */}
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-800">Total USD:</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-gray-700 font-medium">Total USD:</span>
+                  <span className="font-semibold text-gray-900">
                     $
                     {selectedClient.marketingData?.totalSpentUSD.toLocaleString(
                       'es-US'
                     ) || 0}
+                  </span>
+                </div>
+
+                {/* ÚLTIMA VISITA */}
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-700 font-medium">
+                    Ult. Visita:
+                  </span>
+                  <span className="font-semibold text-gray-900">
+                    {isLoadingVisits
+                      ? 'Cargando...'
+                      : formatLastVisitSummary(
+                          visitsData?.ultimaVisitaAbsoluta ?? null
+                        )}
                   </span>
                 </div>
               </div>

@@ -63,3 +63,23 @@ export interface Invoice {
   articulos: InvoiceItem[];
   proveedoresUnicos: string[];
 }
+
+export interface VisitaGPS {
+  fecha: string;
+  vendedorId: string;
+  placa: string;
+  horaLlegada: string;
+  horaSalida: string;
+  duracionMinutos: number;
+  distanciaMetros: number;
+}
+
+export interface UltimaVisita {
+  fecha: string;
+  id_vendedor: string;
+}
+
+export interface ClientVisitsResponse {
+  historialVisitas: VisitaGPS[];
+  ultimaVisitaAbsoluta: UltimaVisita | null;
+}
