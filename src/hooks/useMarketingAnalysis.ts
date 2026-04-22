@@ -16,6 +16,7 @@ interface UseMarketingAnalysisProps {
     endDate: string;
     vendor: string;
     idProveedorIds: string[];
+    idGrupoEmpresarialIds: string[];
   };
   selectedClient: Client | null;
   hasActiveFilters: boolean;
@@ -40,6 +41,7 @@ export function useMarketingAnalysis({
       endDate: filters.endDate,
       vendor: filters.vendor,
       idProveedorIds: filters.idProveedorIds,
+      idGrupoEmpresarialIds: filters.idGrupoEmpresarialIds,
       selectedClientKey,
       selectedBranchKey,
     }),
@@ -58,6 +60,7 @@ export function useMarketingAnalysis({
         endDate: filters.endDate,
         vendor: filters.vendor,
         idProveedorIds: filters.idProveedorIds,
+        idGrupoEmpresarialIds: filters.idGrupoEmpresarialIds,
         selectedClient,
         signal,
       });

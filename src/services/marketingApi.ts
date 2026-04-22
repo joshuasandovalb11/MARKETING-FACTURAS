@@ -211,6 +211,7 @@ interface MarketingAnalysisParams {
   endDate: string;
   vendor: string;
   idProveedorIds: string[];
+  idGrupoEmpresarialIds: string[];
   selectedClient: Client | null;
   signal?: AbortSignal;
 }
@@ -220,6 +221,7 @@ export async function fetchMarketingAnalysis({
   endDate,
   vendor,
   idProveedorIds,
+  idGrupoEmpresarialIds,
   selectedClient,
   signal,
 }: MarketingAnalysisParams) {
@@ -235,6 +237,11 @@ export async function fetchMarketingAnalysis({
   if (idProveedorIds.length > 0) {
     idProveedorIds.forEach((idProveedor) => {
       params.append('idProveedor', idProveedor);
+    });
+  }
+  if (idGrupoEmpresarialIds.length > 0) {
+    idGrupoEmpresarialIds.forEach((idGrupoEmpresarial) => {
+      params.append('idGrupoEmpresarial', idGrupoEmpresarial);
     });
   }
   if (selectedClient) {

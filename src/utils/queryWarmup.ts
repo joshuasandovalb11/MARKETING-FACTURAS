@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import {
   fetchAvailableDates,
+  fetchGruposEmpresariales,
   fetchProveedores,
   fetchVendors,
 } from '../services/catalogApi';
@@ -23,6 +24,12 @@ export async function warmupStaticCatalogs(queryClient: QueryClient) {
     queryClient.prefetchQuery({
       queryKey: ['proveedores'],
       queryFn: ({ signal }) => fetchProveedores(signal),
+      staleTime: QUERY_TIMES.staticCatalogStale,
+      gcTime: QUERY_TIMES.staticCatalogGc,
+    }),
+    queryClient.prefetchQuery({
+      queryKey: ['grupos-empresariales'],
+      queryFn: ({ signal }) => fetchGruposEmpresariales(signal),
       staleTime: QUERY_TIMES.staticCatalogStale,
       gcTime: QUERY_TIMES.staticCatalogGc,
     }),

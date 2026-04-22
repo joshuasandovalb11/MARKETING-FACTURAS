@@ -12,6 +12,7 @@ import VendorPicker from '../components/filters/VendorPicker';
 import StatusPicker from '../components/filters/StatusPicker';
 import ClientSearch from '../components/filters/ClientSearch';
 import ProveedorPicker from '../components/filters/ProveedorPicker';
+import GrupoEmpresarialPicker from '../components/filters/GrupoEmpresarialPicker';
 import FilterSection from '../components/ui/FilterSection';
 import type { Client } from '../types';
 import Login from './Login';
@@ -47,6 +48,31 @@ function readProviderIdsFromParams(searchParams: URLSearchParams) {
   );
 }
 
+function normalizeGroupIds(ids: string[]) {
+  const normalized = Array.from(
+    new Set(ids.map((id) => id.trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+
+  return normalized.slice(0, 1);
+}
+
+function readGroupIdsFromParams(searchParams: URLSearchParams) {
+  const repeated = searchParams.getAll('idGrupoEmpresarial');
+  const rawValues =
+    repeated.length > 0
+      ? repeated
+      : [searchParams.get('idGrupoEmpresarial') || ''];
+
+  return normalizeGroupIds(
+    rawValues.flatMap((value) =>
+      value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
 type FilterUpdateValue = string | string[];
 
 export default function Home() {
@@ -68,6 +94,7 @@ export default function Home() {
       vendor: searchParams.get('vendor') || '',
       status: searchParams.get('status') || '',
       idProveedorIds: readProviderIdsFromParams(searchParams),
+      idGrupoEmpresarialIds: readGroupIdsFromParams(searchParams),
     }),
     [searchParams]
   );
@@ -77,12 +104,16 @@ export default function Home() {
       const params = new URLSearchParams(prev);
 
       Object.entries(newValues).forEach(([key, value]) => {
-        if (key === 'idProveedor') {
+        if (key === 'idProveedor' || key === 'idGrupoEmpresarial') {
           params.delete(key);
 
           if (Array.isArray(value)) {
-            const providerIds = normalizeProviderIds(value);
-            providerIds.forEach((id) => {
+            const normalizedIds =
+              key === 'idProveedor'
+                ? normalizeProviderIds(value)
+                : normalizeGroupIds(value);
+
+            normalizedIds.forEach((id) => {
               params.append(key, id);
             });
           }
@@ -105,6 +136,7 @@ export default function Home() {
     (filters.startDate && filters.endDate) ||
     filters.vendor !== '' ||
     filters.idProveedorIds.length > 0 ||
+    filters.idGrupoEmpresarialIds.length > 0 ||
     (filters.status !== '' && filters.status !== 'all')
   );
 
@@ -210,12 +242,20 @@ export default function Home() {
 
   const handleVendorSelect = (vendorCode: string) => {
     setSelectedClient(null);
-    updateFilters({ vendor: vendorCode });
+    updateFilters({ vendor: vendorCode, idGrupoEmpresarial: [] });
   };
 
   const handleProveedorSelect = (proveedorIds: string[]) => {
     setSelectedClient(null);
     updateFilters({ idProveedor: proveedorIds });
+  };
+
+  const handleGrupoEmpresarialSelect = (grupoIds: string[]) => {
+    setSelectedClient(null);
+    updateFilters({
+      vendor: '',
+      idGrupoEmpresarial: normalizeGroupIds(grupoIds),
+    });
   };
 
   const handleRefresh = () => {
@@ -302,6 +342,14 @@ export default function Home() {
             </FilterSection>
 
             {/* 4. ESTADO DE CLIENTES */}
+            <FilterSection title="GRUPOS EMPRESARIALES">
+              <GrupoEmpresarialPicker
+                selectedGrupoEmpresarialIds={filters.idGrupoEmpresarialIds}
+                onChange={handleGrupoEmpresarialSelect}
+              />
+            </FilterSection>
+
+            {/* 5. ESTADO DE CLIENTES */}
             <FilterSection title="ESTADO DE CLIENTES">
               <StatusPicker
                 selectedStatus={filters.status}
@@ -328,7 +376,10 @@ export default function Home() {
                 onSelect={(client) => {
                   setSelectedClient(client);
                   if (client) {
-                    updateFilters({ vendor: '', idProveedor: [] });
+                    updateFilters({
+                      vendor: '',
+                      idGrupoEmpresarial: [],
+                    });
                   }
                 }}
               />

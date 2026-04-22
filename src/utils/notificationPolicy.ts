@@ -8,6 +8,7 @@ export type ErrorNotificationScope =
   | 'dates-picker'
   | 'vendors-picker'
   | 'proveedores-picker'
+  | 'grupos-empresariales-picker'
   | 'client-search'
   | 'invoice-drawer';
 
@@ -31,6 +32,7 @@ const ERROR_SCOPE_CHANNEL: Record<ErrorNotificationScope, NotificationChannel> =
     'dates-picker': 'toast-inline',
     'vendors-picker': 'toast-inline',
     'proveedores-picker': 'toast-inline',
+    'grupos-empresariales-picker': 'toast-inline',
     'client-search': 'toast-inline',
     'invoice-drawer': 'toast-inline',
   };

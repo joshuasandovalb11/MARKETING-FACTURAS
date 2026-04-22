@@ -42,6 +42,7 @@ export interface FilterState {
   idZona: string;
   idMarca: string;
   idProveedorIds: string[];
+  idGrupoEmpresarialIds: string[];
   idProducto: string;
   agruparSucursales: boolean;
   convertirAMXN: boolean;

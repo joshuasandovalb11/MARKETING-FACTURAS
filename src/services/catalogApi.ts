@@ -12,6 +12,11 @@ export interface CatalogProveedor {
   nombre: string;
 }
 
+export interface CatalogGrupoEmpresarial {
+  id: string;
+  nombre: string;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -113,6 +118,34 @@ export async function fetchProveedores(
 
   logNormalizationStats({
     source: 'catalogos/proveedores',
+    total: json.length,
+    kept: normalized.length,
+  });
+
+  return normalized;
+}
+
+export async function fetchGruposEmpresariales(
+  signal?: AbortSignal
+): Promise<CatalogGrupoEmpresarial[]> {
+  const json = await requestJson<unknown[]>(
+    `${API_BASE_URL}/catalogos/grupos-empresariales`,
+    {
+      signal,
+      timeoutMs: 12000,
+    }
+  );
+
+  if (!Array.isArray(json)) {
+    return [];
+  }
+
+  const normalized = json
+    .map(normalizeCatalogItem)
+    .filter((item): item is CatalogGrupoEmpresarial => item !== null);
+
+  logNormalizationStats({
+    source: 'catalogos/grupos-empresariales',
     total: json.length,
     kept: normalized.length,
   });

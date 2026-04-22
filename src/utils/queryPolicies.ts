@@ -17,15 +17,25 @@ function normalizeProviderIds(ids: string[] | undefined) {
   ).sort((a, b) => a.localeCompare(b));
 }
 
+function normalizeGroupIds(ids: string[] | undefined) {
+  if (!ids || ids.length === 0) return [] as string[];
+
+  return Array.from(
+    new Set(ids.map((id) => String(id).trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+}
+
 export function buildAnalysisQueryKey(params: {
   startDate: string;
   endDate: string;
   vendor: string;
   idProveedorIds: string[];
+  idGrupoEmpresarialIds: string[];
   selectedClientKey: string | number | null;
   selectedBranchKey: string | number | null;
 }) {
   const providerKey = normalizeProviderIds(params.idProveedorIds).join(',');
+  const groupKey = normalizeGroupIds(params.idGrupoEmpresarialIds).join(',');
 
   return [
     'analysis',
@@ -33,6 +43,7 @@ export function buildAnalysisQueryKey(params: {
     params.endDate || '',
     params.vendor || '',
     providerKey,
+    groupKey,
     params.selectedClientKey ? String(params.selectedClientKey) : 'none',
     params.selectedBranchKey ? String(params.selectedBranchKey) : 'none',
   ] as const;
