@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Truck, ChevronDown, Check, X, Search, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useProveedores } from '../../hooks/useProveedores';
 import { useProveedorFavorites } from '../../hooks/useProveedorFavorites';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import AsyncFeedbackBlock from '../ui/feedback/AsyncFeedbackBlock';
 import { useNotificationToast } from '../../hooks/useNotificationToast';
 import { resolveErrorMessageNotification } from '../../utils/notificationPolicy';
@@ -16,12 +17,76 @@ interface ProveedorPickerProps {
 const DROPDOWN_HEIGHT_ESTIMATE = 320;
 const SAFETY_MARGIN = 10;
 
+interface ProveedorRowItem {
+  id: string;
+  nombre: string;
+}
+
+interface ProveedorRowProps {
+  prov: ProveedorRowItem;
+  isSelected: boolean;
+  isFav: boolean;
+  onToggleProveedor: (provId: string) => void;
+  onToggleFavorite: (provId: string, event: React.MouseEvent) => void;
+}
+
+const ProveedorRow = memo(function ProveedorRow({
+  prov,
+  isSelected,
+  isFav,
+  onToggleProveedor,
+  onToggleFavorite,
+}: ProveedorRowProps) {
+  const providerId = String(prov.id);
+
+  return (
+    <button
+      onClick={() => {
+        onToggleProveedor(providerId);
+      }}
+      className={`w-full text-left px-3 py-2 text-xs rounded-md flex items-center justify-between gap-2 transition-colors cursor-pointer shrink-0 group/row
+          ${isSelected ? 'bg-slate-900/5 text-slate-900 font-medium' : 'hover:bg-slate-50 text-slate-600'}`}
+    >
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <span
+          className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center shrink-0
+              ${isSelected ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-300 bg-white text-transparent'}`}
+        >
+          <Check className="w-3 h-3" />
+        </span>
+
+        <span className="truncate flex-1" title={prov.nombre}>
+          {prov.nombre}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1.5 shrink-0">
+        {/* Estrella de favorito */}
+        <span
+          onClick={(event) => onToggleFavorite(providerId, event)}
+          className={`rounded transition-colors cursor-pointer
+              ${
+                isFav
+                  ? 'text-amber-400 hover:text-amber-500'
+                  : isSelected
+                    ? 'text-slate-500 hover:text-amber-300'
+                    : 'text-transparent group-hover/row:text-slate-500 hover:text-amber-400!'
+              }`}
+        >
+          <Star className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
+        </span>
+      </div>
+    </button>
+  );
+});
+
 export default function ProveedorPicker({
   selectedProveedores,
   onChange,
 }: ProveedorPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 180);
   const { favorites, toggleFavorite } = useProveedorFavorites();
   const { proveedores, loading, error, errorMessage, fetchProveedores } =
     useProveedores();
@@ -52,32 +117,58 @@ export default function ProveedorPicker({
         ? selectedNames[0] || '1 proveedor seleccionado'
         : `${selectedIds.length} proveedores seleccionados`;
 
-  const handleToggleFavorite = (e: React.MouseEvent, provId: string) => {
-    e.stopPropagation();
-    toggleFavorite(provId);
-  };
+  const handleToggleFavorite = useCallback(
+    (provId: string, event: React.MouseEvent) => {
+      event.stopPropagation();
+      toggleFavorite(provId);
+    },
+    [toggleFavorite]
+  );
 
-  const toggleProveedor = (provId: string) => {
-    if (selectedIdsSet.has(provId)) {
-      onChange(selectedIds.filter((id) => id !== provId));
-      return;
-    }
+  const toggleProveedor = useCallback(
+    (provId: string) => {
+      if (selectedIdsSet.has(provId)) {
+        onChange(selectedIds.filter((id) => id !== provId));
+        return;
+      }
 
-    onChange([...selectedIds, provId]);
-  };
+      onChange([...selectedIds, provId]);
+    },
+    [selectedIdsSet, onChange, selectedIds]
+  );
 
-  const { favList, restList } = (() => {
-    const filtered = proveedores.filter((p) =>
-      p.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    const favs = filtered
-      .filter((p) => favorites.has(String(p.id)))
+  const proveedoresPrepared = useMemo(() => {
+    return [...proveedores]
+      .map((provider) => ({
+        id: String(provider.id),
+        nombre: provider.nombre,
+        nombreLower: provider.nombre.toLowerCase(),
+      }))
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
-    const rest = filtered
-      .filter((p) => !favorites.has(String(p.id)))
-      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [proveedores]);
+
+  const { favList, restList } = useMemo(() => {
+    const normalizedSearch = debouncedSearchTerm.trim().toLowerCase();
+    const filtered = normalizedSearch
+      ? proveedoresPrepared.filter((provider) =>
+          provider.nombreLower.includes(normalizedSearch)
+        )
+      : proveedoresPrepared;
+
+    const favs: ProveedorRowItem[] = [];
+    const rest: ProveedorRowItem[] = [];
+
+    filtered.forEach((provider) => {
+      const plainProvider = { id: provider.id, nombre: provider.nombre };
+      if (favorites.has(provider.id)) {
+        favs.push(plainProvider);
+      } else {
+        rest.push(plainProvider);
+      }
+    });
+
     return { favList: favs, restList: rest };
-  })();
+  }, [debouncedSearchTerm, favorites, proveedoresPrepared]);
 
   const updatePosition = () => {
     if (!buttonRef.current) return;
@@ -163,53 +254,6 @@ export default function ProveedorPicker({
       })
     );
   }, [error, errorMessage, notify]);
-
-  const ProveedorRow = ({ prov }: { prov: { id: string; nombre: string } }) => {
-    const providerId = String(prov.id);
-    const isSelected = selectedIdsSet.has(providerId);
-    const isFav = favorites.has(String(prov.id));
-
-    return (
-      <button
-        key={prov.id}
-        onClick={() => {
-          toggleProveedor(providerId);
-        }}
-        className={`w-full text-left px-3 py-2 text-xs rounded-md flex items-center justify-between gap-2 transition-colors cursor-pointer shrink-0 group/row
-          ${isSelected ? 'bg-slate-900/5 text-slate-900 font-medium' : 'hover:bg-slate-50 text-slate-600'}`}
-      >
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span
-            className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center shrink-0
-              ${isSelected ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-300 bg-white text-transparent'}`}
-          >
-            <Check className="w-3 h-3" />
-          </span>
-
-          <span className="truncate flex-1" title={prov.nombre}>
-            {prov.nombre}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* Estrella de favorito */}
-          <span
-            onClick={(e) => handleToggleFavorite(e, String(prov.id))}
-            className={`rounded transition-colors cursor-pointer
-              ${
-                isFav
-                  ? 'text-amber-400 hover:text-amber-500'
-                  : isSelected
-                    ? 'text-slate-500 hover:text-amber-300'
-                    : 'text-transparent group-hover/row:text-slate-500 hover:text-amber-400!'
-              }`}
-          >
-            <Star className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
-          </span>
-        </div>
-      </button>
-    );
-  };
 
   return (
     <div className="relative group w-full">
@@ -336,7 +380,14 @@ export default function ProveedorPicker({
                           <Star className="w-3 h-3 fill-current" /> Favoritos
                         </p>
                         {favList.map((prov) => (
-                          <ProveedorRow key={prov.id} prov={prov} />
+                          <ProveedorRow
+                            key={prov.id}
+                            prov={prov}
+                            isSelected={selectedIdsSet.has(String(prov.id))}
+                            isFav={favorites.has(String(prov.id))}
+                            onToggleProveedor={toggleProveedor}
+                            onToggleFavorite={handleToggleFavorite}
+                          />
                         ))}
                         <div className="border-t border-slate-200 my-1 shrink-0" />
                       </>
@@ -345,7 +396,14 @@ export default function ProveedorPicker({
                     {/* RESTO */}
                     {restList.length > 0
                       ? restList.map((prov) => (
-                          <ProveedorRow key={prov.id} prov={prov} />
+                          <ProveedorRow
+                            key={prov.id}
+                            prov={prov}
+                            isSelected={selectedIdsSet.has(String(prov.id))}
+                            isFav={favorites.has(String(prov.id))}
+                            onToggleProveedor={toggleProveedor}
+                            onToggleFavorite={handleToggleFavorite}
+                          />
                         ))
                       : favList.length === 0 && (
                           <div className="p-4 text-center text-xs text-slate-400">

@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Building2, ChevronDown, Check, X, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useGruposEmpresariales } from '../../hooks/useGruposEmpresariales';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import AsyncFeedbackBlock from '../ui/feedback/AsyncFeedbackBlock';
 import { useNotificationToast } from '../../hooks/useNotificationToast';
 import { resolveErrorMessageNotification } from '../../utils/notificationPolicy';
@@ -15,12 +16,61 @@ interface GrupoEmpresarialPickerProps {
 const DROPDOWN_HEIGHT_ESTIMATE = 320;
 const SAFETY_MARGIN = 10;
 
+interface GroupRowItem {
+  id: string;
+  nombre: string;
+}
+
+interface GrupoRowProps {
+  group: GroupRowItem;
+  isSelected: boolean;
+  onToggleGrupo: (groupId: string) => void;
+}
+
+const GrupoRow = memo(function GrupoRow({
+  group,
+  isSelected,
+  onToggleGrupo,
+}: GrupoRowProps) {
+  const groupId = String(group.id);
+
+  return (
+    <button
+      onClick={() => {
+        onToggleGrupo(groupId);
+      }}
+      className={`w-full cursor-pointer shrink-0 rounded-md px-3 py-2 text-left text-xs transition-colors ${
+        isSelected
+          ? 'bg-slate-900/5 font-medium text-slate-900'
+          : 'text-slate-600 hover:bg-slate-50'
+      }`}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <span
+          className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border ${
+            isSelected
+              ? 'border-slate-900 bg-slate-900 text-white'
+              : 'border-slate-300 bg-white text-transparent'
+          }`}
+        >
+          <Check className="h-3 w-3" />
+        </span>
+
+        <span className="truncate" title={group.nombre}>
+          {group.nombre}
+        </span>
+      </div>
+    </button>
+  );
+});
+
 export default function GrupoEmpresarialPicker({
   selectedGrupoEmpresarialIds,
   onChange,
 }: GrupoEmpresarialPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 180);
   const {
     gruposEmpresariales,
     loading,
@@ -43,7 +93,7 @@ export default function GrupoEmpresarialPicker({
     new Set(selectedGrupoEmpresarialIds.map((id) => String(id)))
   );
   const selectedId = selectedIds[0] || '';
-  const selectedIdsSet = new Set(selectedIds);
+  const selectedIdsSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const isActive = selectedIds.length > 0;
   const isAll = selectedIds.length === 0;
 
@@ -58,21 +108,39 @@ export default function GrupoEmpresarialPicker({
         ? selectedNames[0] || '1 grupo seleccionado'
         : `${selectedIds.length} grupos seleccionados`;
 
-  const filteredGroups = gruposEmpresariales
-    .filter((group) =>
-      group.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  const groupsPrepared = useMemo(() => {
+    return [...gruposEmpresariales]
+      .map((group) => ({
+        id: String(group.id),
+        nombre: group.nombre,
+        nombreLower: group.nombre.toLowerCase(),
+      }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [gruposEmpresariales]);
 
-  const toggleGrupo = (groupId: string) => {
-    if (selectedId === groupId) {
-      onChange([]);
-      return;
-    }
+  const filteredGroups = useMemo(() => {
+    const normalizedSearch = debouncedSearchTerm.trim().toLowerCase();
+    const filtered = normalizedSearch
+      ? groupsPrepared.filter((group) =>
+          group.nombreLower.includes(normalizedSearch)
+        )
+      : groupsPrepared;
 
-    onChange([groupId]);
-    setIsOpen(false);
-  };
+    return filtered.map((group) => ({ id: group.id, nombre: group.nombre }));
+  }, [debouncedSearchTerm, groupsPrepared]);
+
+  const toggleGrupo = useCallback(
+    (groupId: string) => {
+      if (selectedId === groupId) {
+        onChange([]);
+        return;
+      }
+
+      onChange([groupId]);
+      setIsOpen(false);
+    },
+    [onChange, selectedId]
+  );
 
   const updatePosition = () => {
     if (!buttonRef.current) return;
@@ -161,41 +229,6 @@ export default function GrupoEmpresarialPicker({
       })
     );
   }, [error, errorMessage, notify]);
-
-  const GrupoRow = ({ group }: { group: { id: string; nombre: string } }) => {
-    const groupId = String(group.id);
-    const isSelected = selectedIdsSet.has(groupId);
-
-    return (
-      <button
-        key={group.id}
-        onClick={() => {
-          toggleGrupo(groupId);
-        }}
-        className={`w-full cursor-pointer shrink-0 rounded-md px-3 py-2 text-left text-xs transition-colors ${
-          isSelected
-            ? 'bg-slate-900/5 font-medium text-slate-900'
-            : 'text-slate-600 hover:bg-slate-50'
-        }`}
-      >
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span
-            className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border ${
-              isSelected
-                ? 'border-slate-900 bg-slate-900 text-white'
-                : 'border-slate-300 bg-white text-transparent'
-            }`}
-          >
-            <Check className="h-3 w-3" />
-          </span>
-
-          <span className="truncate" title={group.nombre}>
-            {group.nombre}
-          </span>
-        </div>
-      </button>
-    );
-  };
 
   return (
     <div className="group relative w-full">
@@ -317,7 +350,12 @@ export default function GrupoEmpresarialPicker({
 
                     {filteredGroups.length > 0 ? (
                       filteredGroups.map((group) => (
-                        <GrupoRow key={group.id} group={group} />
+                        <GrupoRow
+                          key={group.id}
+                          group={group}
+                          isSelected={selectedIdsSet.has(String(group.id))}
+                          onToggleGrupo={toggleGrupo}
+                        />
                       ))
                     ) : (
                       <div className="p-4 text-center text-xs text-slate-400">
