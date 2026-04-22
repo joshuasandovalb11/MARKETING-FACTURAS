@@ -72,6 +72,8 @@ function normalizeAnalysisClient(row: unknown): Client | null {
       ordersCount: readNumber(marketingRaw.ordersCount) ?? 0,
       lastPurchase: readString(marketingRaw.lastPurchase),
       status: normalizeStatus(marketingRaw.status),
+      visitadoEnPeriodo: Boolean(marketingRaw.visitadoEnPeriodo),
+      ventaEnCampo: Boolean(marketingRaw.ventaEnCampo),
     },
   };
 }

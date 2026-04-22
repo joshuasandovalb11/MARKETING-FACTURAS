@@ -6,6 +6,8 @@ export interface MarketingData {
   ordersCount: number;
   lastPurchase: string | null;
   status: 'activo' | 'sin_compra';
+  visitadoEnPeriodo?: boolean;
+  ventaEnCampo?: boolean;
 }
 
 export interface Client {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   GoogleMap,
   useJsApiLoader,
@@ -11,9 +11,11 @@ import LoadingLayer from '../ui/feedback/LoadingLayer';
 import RefreshingMask from '../ui/feedback/RefreshingMask';
 import RecoverableErrorBanner from '../ui/feedback/RecoverableErrorBanner';
 import { useClientVisits } from '../../hooks/useClientVisits';
+import { useMapStatistics } from '../../hooks/useMapStatistics';
+import MapStatisticsBar from './MapStatisticsBar';
 import {
-  formatLastVisitSummary,
   formatVendorTag,
+  formatLastVisitSummary,
 } from '../../utils/visitInsights';
 
 interface MapProps {
@@ -71,36 +73,16 @@ export default function MapContainer({
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
   const { visitsData, isLoadingVisits } = useClientVisits({
     client: selectedClient,
     filters: visitFilters,
   });
+  const stats = useMapStatistics(clients);
 
   useEffect(() => {
     setSelectedClient(null);
   }, [filterHash]);
-
-  const stats = useMemo(() => {
-    return clients.reduce(
-      (acc, client) => {
-        acc.totalMXN += client.marketingData?.totalSpentMXN || 0;
-        acc.totalUSD += client.marketingData?.totalSpentUSD || 0;
-
-        const status = client.marketingData?.status;
-        const isActive = status === 'activo';
-
-        if (isActive) {
-          acc.active += 1;
-        } else {
-          acc.inactive += 1;
-        }
-
-        acc.total += 1;
-        return acc;
-      },
-      { totalMXN: 0, totalUSD: 0, total: 0, active: 0, inactive: 0 }
-    );
-  }, [clients]);
 
   useEffect(() => {
     if (selectedClient) {
@@ -172,6 +154,11 @@ export default function MapContainer({
   if (!isLoaded)
     return <div className="w-full h-full bg-gray-100 animate-pulse" />;
 
+  const formatStatusText =
+    selectedClient?.marketingData?.status === 'activo'
+      ? 'Activo'
+      : 'Sin compra';
+
   return (
     <div className="relative w-full h-full">
       <GoogleMap
@@ -199,6 +186,7 @@ export default function MapContainer({
             onCloseClick={() => setSelectedClient(null)}
           >
             <div className="min-w-48 max-w-56">
+              {/* ID DEL CLIENTE */}
               <p className="text-[13px] font-bold text-gray-900">
                 #{selectedClient.marketingData?.clienteId || selectedClient.id}
               </p>
@@ -236,7 +224,7 @@ export default function MapContainer({
                         : 'text-red-600'
                     }`}
                   >
-                    {selectedClient.marketingData?.status || 'Desconocido'}
+                    {formatStatusText}
                   </span>
                 </div>
 
@@ -283,7 +271,15 @@ export default function MapContainer({
                   <span className="text-gray-700 font-medium">
                     Ult. Visita:
                   </span>
-                  <span className="font-semibold text-gray-900">
+                  <span
+                    className={`font-semibold ${
+                      isLoadingVisits
+                        ? 'text-gray-900'
+                        : visitsData?.ultimaVisitaAbsoluta
+                          ? 'text-stone-900'
+                          : 'text-red-600'
+                    }`}
+                  >
                     {isLoadingVisits
                       ? 'Cargando...'
                       : formatLastVisitSummary(
@@ -322,67 +318,9 @@ export default function MapContainer({
         <RecoverableErrorBanner message={errorMessage} onRetry={onRetry} />
       )}
 
-      {/* BARRA DE ESTADÍSTICAS FLOTANTE */}
+      {/* BARRA DE ESTADÍSTICAS */}
       {!isIdle && !isLoading && !errorMessage && clients.length > 0 && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10 w-auto max-w-[95%]">
-          <div className="bg-white/90 backdrop-blur-md shadow-xl rounded-full px-5 py-2.5 flex items-center gap-6 animate-in slide-in-from-bottom-4 duration-500">
-            {/* Sección: Clientes */}
-            <div className="flex flex-col min-w-25">
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-lg font-extrabold text-gray-800 leading-none">
-                  {stats.total.toLocaleString()}
-                </span>
-                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">
-                  Clientes
-                </span>
-              </div>
-              <div className="flex gap-2 text-[11px] font-semibold mt-0.5 leading-none">
-                <span className="text-green-600">{stats.active} Activos</span>
-                <span className="text-gray-300">|</span>
-                <span className="text-red-500">
-                  {stats.inactive} Sin Compra
-                </span>
-              </div>
-            </div>
-
-            <div className="w-px h-8 bg-gray-300"></div>
-
-            {/* Sección: Ventas MXN */}
-            <div className="flex items-center gap-2">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Venta MXN
-                </span>
-                <span className="text-sm font-bold text-gray-800 leading-tight">
-                  $
-                  {stats.totalMXN.toLocaleString('es-MX', {
-                    maximumFractionDigits: 0,
-                  })}
-                </span>
-              </div>
-            </div>
-
-            {/* Sección: Ventas USD */}
-            {stats.totalUSD > 0 && (
-              <>
-                <div className="w-px h-8 bg-gray-300"></div>
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                      Venta USD
-                    </span>
-                    <span className="text-sm font-bold text-gray-800 leading-tight">
-                      $
-                      {stats.totalUSD.toLocaleString('en-US', {
-                        maximumFractionDigits: 0,
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <MapStatisticsBar stats={stats} />
       )}
     </div>
   );
