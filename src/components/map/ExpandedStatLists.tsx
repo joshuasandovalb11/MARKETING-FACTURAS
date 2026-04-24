@@ -6,6 +6,14 @@ import { formatVendorTag } from '../../utils/visitInsights';
 const capitalizeStr = (s: string) =>
   s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
+const parseClientId = (rawId: string) => {
+  const [numeroCliente, sucursalId] = rawId.split('_');
+  return {
+    numeroCliente: numeroCliente ?? rawId,
+    sucursalId: sucursalId ?? '',
+  };
+};
+
 // ==========================================
 // 1. LISTA DE CLIENTES
 // ==========================================
@@ -18,23 +26,13 @@ export function ClientSummaryList({ clients }: { clients: ClientDetail[] }) {
     );
   }
 
-  const parseClientId = (rawId: string) => {
-    const [numeroCliente, sucursalId] = rawId.split('_');
-    return {
-      numeroCliente: numeroCliente ?? rawId,
-      sucursalId: sucursalId ?? '',
-    };
-  };
-
   return (
     <>
       {clients.map((c) => (
-        // ESTRUCTURA BASE DE LA FILA
         <div
           key={c.id}
           className="flex items-center justify-between border-b border-slate-100 pb-2.5 pt-1.5 last:border-0 hover:bg-slate-50/50 transition-colors rounded-md px-2 -mx-2"
         >
-          {/* LADO IZQUIERDO: Información principal */}
           <div className="flex min-w-0 flex-1 flex-col pr-4">
             <div className="flex gap-1 truncate text-xs font-extrabold text-slate-800">
               <span>#{parseClientId(c.id).numeroCliente}</span>
@@ -57,7 +55,6 @@ export function ClientSummaryList({ clients }: { clients: ClientDetail[] }) {
                 {c.status === 'activo' ? 'Activo' : 'S/C'}
               </span>
 
-              {/* BADGE DE CAMPO VS REMOTA */}
               {c.status === 'activo' &&
                 (c.ventaEnCampo ? (
                   <span className="flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-600 border border-blue-100/50">
@@ -71,7 +68,6 @@ export function ClientSummaryList({ clients }: { clients: ClientDetail[] }) {
             </div>
           </div>
 
-          {/* LADO DERECHO: Montos */}
           <div className="flex shrink-0 flex-col items-end text-right">
             <span className="text-sm font-extrabold text-slate-800">
               $
@@ -103,14 +99,6 @@ export function VisitsSummaryList({ visits }: { visits: ClientDetail[] }) {
       </div>
     );
   }
-
-  const parseClientId = (rawId: string) => {
-    const [numeroCliente, sucursalId] = rawId.split('_');
-    return {
-      numeroCliente: numeroCliente ?? rawId,
-      sucursalId: sucursalId ?? '',
-    };
-  };
 
   return (
     <>
@@ -167,48 +155,49 @@ export function VendorSummaryList({ vendors }: { vendors: VendorSummary[] }) {
     );
   }
 
-  const inactivos = vendors.reduce(
-    (acc, v) => acc + (v.clientes - v.activos),
-    0
-  );
-
   return (
     <>
-      {vendors.map((v) => (
-        <div
-          key={v.vendedor}
-          className="flex items-center justify-between border-b border-slate-100 pb-2.5 pt-1.5 last:border-0 hover:bg-slate-50/50 transition-colors rounded-md px-2 -mx-2"
-        >
-          <div className="flex min-w-0 flex-1 flex-col pr-4">
-            <span className="truncate text-xs font-extrabold uppercase tracking-wide text-slate-800">
-              {formatVendorTag(v.vendedor)}
-            </span>
+      {vendors.map((v) => {
+        const inactivos = v.clientes - v.activos;
 
-            <div className="mt-1.5 flex items-center gap-2 text-[10px] font-bold text-slate-500">
-              <span>
-                <span className="text-slate-800">{v.clientes}</span> Clientes
+        return (
+          <div
+            key={v.vendedor}
+            className="flex items-center justify-between border-b border-slate-100 pb-2.5 pt-1.5 last:border-0 hover:bg-slate-50/50 transition-colors rounded-md px-2 -mx-2"
+          >
+            <div className="flex min-w-0 flex-1 flex-col pr-4">
+              <span className="truncate text-xs font-extrabold uppercase tracking-wide text-slate-800">
+                {formatVendorTag(v.vendedor)}
               </span>
-              <span className="text-slate-200">|</span>
-              <span className="text-emerald-600">{v.activos} Activos</span>
-              <span className="text-slate-200">|</span>
-              <span className="text-red-600">{inactivos} Inactivos</span>
+
+              <div className="mt-1.5 flex items-center gap-2 text-[10px] font-bold text-slate-500">
+                <span>
+                  <span className="text-slate-800">{v.clientes}</span> Clientes
+                </span>
+                <span className="text-slate-200">|</span>
+                <span className="text-emerald-600">{v.activos} Activos</span>
+                <span className="text-slate-200">|</span>
+                <span className="text-red-600">{inactivos} Inactivos</span>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 flex-col items-end text-right">
+              <span className="text-sm font-extrabold text-slate-800">
+                $
+                {v.ventaMXN.toLocaleString('es-MX', {
+                  maximumFractionDigits: 0,
+                })}
+              </span>
+              <span className="mt-0.5 text-[9px] font-bold text-slate-400">
+                Promedio: $
+                {v.ticketPromedio.toLocaleString('es-MX', {
+                  maximumFractionDigits: 0,
+                })}
+              </span>
             </div>
           </div>
-
-          <div className="flex shrink-0 flex-col items-end text-right">
-            <span className="text-sm font-extrabold text-slate-800">
-              $
-              {v.ventaMXN.toLocaleString('es-MX', { maximumFractionDigits: 0 })}
-            </span>
-            <span className="mt-0.5 text-[9px] font-bold text-slate-400">
-              Promedio: $
-              {v.ticketPromedio.toLocaleString('es-MX', {
-                maximumFractionDigits: 0,
-              })}
-            </span>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </>
   );
 }
