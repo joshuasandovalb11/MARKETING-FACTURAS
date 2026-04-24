@@ -10,7 +10,7 @@ import MapContainer from '../components/map/MapContainer';
 import DateRangePicker from '../components/filters/DateRangePicker';
 import VendorPicker from '../components/filters/VendorPicker';
 import StatusPicker from '../components/filters/StatusPicker';
-import ClientSearch from '../components/filters/ClientSearch';
+import GlobalSearch from '../components/filters/GlobalSearch';
 import ProveedorPicker from '../components/filters/ProveedorPicker';
 import GrupoEmpresarialPicker from '../components/filters/GrupoEmpresarialPicker';
 import FilterSection from '../components/ui/FilterSection';
@@ -49,11 +49,9 @@ function readProviderIdsFromParams(searchParams: URLSearchParams) {
 }
 
 function normalizeGroupIds(ids: string[]) {
-  const normalized = Array.from(
-    new Set(ids.map((id) => id.trim()).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b));
-
-  return normalized.slice(0, 1);
+  return Array.from(new Set(ids.map((id) => id.trim()).filter(Boolean))).sort(
+    (a, b) => a.localeCompare(b)
+  );
 }
 
 function readGroupIdsFromParams(searchParams: URLSearchParams) {
@@ -258,6 +256,46 @@ export default function Home() {
     });
   };
 
+  const handleProveedorQuickSelectWithMode = (
+    proveedorId: string,
+    mode: 'add' | 'replace'
+  ) => {
+    const normalizedId = String(proveedorId).trim();
+    if (!normalizedId) return;
+
+    if (mode === 'replace') {
+      handleProveedorSelect([normalizedId]);
+      return;
+    }
+
+    const alreadySelected = filters.idProveedorIds.includes(normalizedId);
+    if (alreadySelected) return;
+
+    handleProveedorSelect([...filters.idProveedorIds, normalizedId]);
+  };
+
+  const handleGrupoQuickSelectWithMode = (
+    grupoId: string,
+    mode: 'add' | 'replace'
+  ) => {
+    const normalizedId = String(grupoId).trim();
+    if (!normalizedId) return;
+
+    if (mode === 'replace') {
+      handleGrupoEmpresarialSelect([normalizedId]);
+      return;
+    }
+
+    const alreadySelected =
+      filters.idGrupoEmpresarialIds.includes(normalizedId);
+    if (alreadySelected) return;
+
+    handleGrupoEmpresarialSelect([
+      ...filters.idGrupoEmpresarialIds,
+      normalizedId,
+    ]);
+  };
+
   const handleRefresh = () => {
     const hadActiveContext = hasActiveFilters || Boolean(selectedClient);
 
@@ -371,9 +409,12 @@ export default function Home() {
         {user && (
           <header className="h-14 bg-gray-50 border-b border-slate-200 flex items-center justify-center px-6 shrink-0 gap-4">
             <div className="w-full max-w-sm">
-              <ClientSearch
+              <GlobalSearch
                 selectedClient={selectedClient}
-                onSelect={(client) => {
+                selectedVendor={filters.vendor}
+                selectedProveedores={filters.idProveedorIds}
+                selectedGrupoEmpresarialIds={filters.idGrupoEmpresarialIds}
+                onSelectClient={(client) => {
                   setSelectedClient(client);
                   if (client) {
                     updateFilters({
@@ -382,6 +423,9 @@ export default function Home() {
                     });
                   }
                 }}
+                onSelectVendor={handleVendorSelect}
+                onSelectProveedor={handleProveedorQuickSelectWithMode}
+                onSelectGrupoEmpresarial={handleGrupoQuickSelectWithMode}
               />
             </div>
           </header>

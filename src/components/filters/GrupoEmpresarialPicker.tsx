@@ -92,7 +92,6 @@ export default function GrupoEmpresarialPicker({
   const selectedIds = Array.from(
     new Set(selectedGrupoEmpresarialIds.map((id) => String(id)))
   );
-  const selectedId = selectedIds[0] || '';
   const selectedIdsSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const isActive = selectedIds.length > 0;
   const isAll = selectedIds.length === 0;
@@ -131,15 +130,14 @@ export default function GrupoEmpresarialPicker({
 
   const toggleGrupo = useCallback(
     (groupId: string) => {
-      if (selectedId === groupId) {
-        onChange([]);
+      if (selectedIdsSet.has(groupId)) {
+        onChange(selectedIds.filter((id) => id !== groupId));
         return;
       }
 
-      onChange([groupId]);
-      setIsOpen(false);
+      onChange([...selectedIds, groupId]);
     },
-    [onChange, selectedId]
+    [onChange, selectedIds, selectedIdsSet]
   );
 
   const updatePosition = () => {
