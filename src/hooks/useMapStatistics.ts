@@ -1,6 +1,27 @@
 import { useMemo } from 'react';
 import type { Client } from '../types';
 
+export interface ClientDetail {
+  id: string;
+  nombre: string;
+  sucursal: string;
+  status: 'activo' | 'sin_compra';
+  ventaMXN: number;
+  ventaUSD: number;
+  ventaEnCampo: boolean;
+  fueVisitado: boolean;
+  vendedor: string;
+}
+
+export interface VendorSummary {
+  vendedor: string;
+  clientes: number;
+  activos: number;
+  ventaMXN: number;
+  ventaUSD: number;
+  ticketPromedio: number;
+}
+
 export interface MapStatistics {
   total: number;
   activos: number;
@@ -14,6 +35,9 @@ export interface MapStatistics {
   visitadosNoCompraron: number;
   ventasCampo: number;
   ventasRemotas: number;
+  listaClientes: ClientDetail[];
+  listaVisitados: ClientDetail[];
+  rankingVendedores: VendorSummary[];
 }
 
 export function useMapStatistics(clients: Client[]) {
@@ -27,28 +51,72 @@ export function useMapStatistics(clients: Client[]) {
     let ventasCampo = 0;
     let visitadosCompraron = 0;
 
+    const listaClientes: ClientDetail[] = [];
+    const listaVisitados: ClientDetail[] = [];
+    const vendorsMap = new Map<string, VendorSummary>();
+
     clients.forEach((client) => {
       total += 1;
       const marketingData = client.marketingData;
 
-      if (marketingData?.status === 'activo') {
+      const vMXN = marketingData?.totalSpentMXN || 0;
+      const vUSD = marketingData?.totalSpentUSD || 0;
+      const statusVenta =
+        marketingData?.status === 'activo' ? 'activo' : 'sin_compra';
+      const fueVisitado = marketingData?.visitadoEnPeriodo === true;
+      const ventaEnCampo = marketingData?.ventaEnCampo === true;
+      const vendedorStr = client.vendor || 'S/V';
+
+      if (statusVenta === 'activo') {
         activos += 1;
-        totalMXN += marketingData.totalSpentMXN || 0;
-        totalUSD += marketingData.totalSpentUSD || 0;
+        totalMXN += vMXN;
+        totalUSD += vUSD;
       } else {
         inactivos += 1;
       }
 
-      const fueVisitado = marketingData?.visitadoEnPeriodo === true;
-      const ventaEnCampo = marketingData?.ventaEnCampo === true;
-
       if (fueVisitado) {
         visitados += 1;
-        if (marketingData?.status === 'activo') visitadosCompraron += 1;
+        if (statusVenta === 'activo') visitadosCompraron += 1;
       }
 
-      if (ventaEnCampo && marketingData?.status === 'activo') {
+      if (ventaEnCampo && statusVenta === 'activo') {
         ventasCampo += 1;
+      }
+
+      const clientDetail: ClientDetail = {
+        id: client.id.toString(),
+        nombre: client.name || 'Cliente sin nombre',
+        sucursal: client.branchName || '',
+        status: statusVenta,
+        ventaMXN: vMXN,
+        ventaUSD: vUSD,
+        ventaEnCampo,
+        fueVisitado,
+        vendedor: vendedorStr,
+      };
+
+      listaClientes.push(clientDetail);
+      if (fueVisitado) {
+        listaVisitados.push(clientDetail);
+      }
+
+      if (!vendorsMap.has(vendedorStr)) {
+        vendorsMap.set(vendedorStr, {
+          vendedor: vendedorStr,
+          clientes: 0,
+          activos: 0,
+          ventaMXN: 0,
+          ventaUSD: 0,
+          ticketPromedio: 0,
+        });
+      }
+      const vStats = vendorsMap.get(vendedorStr)!;
+      vStats.clientes += 1;
+      if (statusVenta === 'activo') {
+        vStats.activos += 1;
+        vStats.ventaMXN += vMXN;
+        vStats.ventaUSD += vUSD;
       }
     });
 
@@ -56,6 +124,22 @@ export function useMapStatistics(clients: Client[]) {
     const ventasRemotas = activos - ventasCampo;
     const visitadosNoCompraron = visitados - visitadosCompraron;
     const ticketPromedio = activos > 0 ? totalMXN / activos : 0;
+
+    vendorsMap.forEach((v) => {
+      v.ticketPromedio = v.activos > 0 ? v.ventaMXN / v.activos : 0;
+    });
+
+    const sortClients = (a: ClientDetail, b: ClientDetail) => {
+      if (a.status === 'activo' && b.status !== 'activo') return -1;
+      if (b.status === 'activo' && a.status !== 'activo') return 1;
+      return b.ventaMXN - a.ventaMXN;
+    };
+
+    listaClientes.sort(sortClients);
+    listaVisitados.sort(sortClients);
+    const rankingVendedores = Array.from(vendorsMap.values()).sort(
+      (a, b) => b.ventaMXN - a.ventaMXN
+    );
 
     return {
       total,
@@ -70,6 +154,9 @@ export function useMapStatistics(clients: Client[]) {
       visitadosNoCompraron,
       ventasCampo,
       ventasRemotas,
+      listaClientes,
+      listaVisitados,
+      rankingVendedores,
     };
   }, [clients]);
 }

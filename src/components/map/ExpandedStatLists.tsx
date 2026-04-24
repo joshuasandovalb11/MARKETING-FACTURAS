@@ -1,0 +1,214 @@
+// src/components/map/ExpandedStatLists.tsx
+import { CarFront, PhoneCall } from 'lucide-react';
+import type { ClientDetail, VendorSummary } from '../../hooks/useMapStatistics';
+import { formatVendorTag } from '../../utils/visitInsights';
+
+const capitalizeStr = (s: string) =>
+  s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+// ==========================================
+// 1. LISTA DE CLIENTES
+// ==========================================
+export function ClientSummaryList({ clients }: { clients: ClientDetail[] }) {
+  if (clients.length === 0) {
+    return (
+      <div className="p-4 text-center text-xs font-medium text-slate-400">
+        No hay clientes para mostrar.
+      </div>
+    );
+  }
+
+  const parseClientId = (rawId: string) => {
+    const [numeroCliente, sucursalId] = rawId.split('_');
+    return {
+      numeroCliente: numeroCliente ?? rawId,
+      sucursalId: sucursalId ?? '',
+    };
+  };
+
+  return (
+    <>
+      {clients.map((c) => (
+        // ESTRUCTURA BASE DE LA FILA
+        <div
+          key={c.id}
+          className="flex items-center justify-between border-b border-slate-100 pb-2.5 pt-1.5 last:border-0 hover:bg-slate-50/50 transition-colors rounded-md px-2 -mx-2"
+        >
+          {/* LADO IZQUIERDO: Información principal */}
+          <div className="flex min-w-0 flex-1 flex-col pr-4">
+            <div className="flex gap-1 truncate text-xs font-extrabold text-slate-800">
+              <span>#{parseClientId(c.id).numeroCliente}</span>
+              <span>{capitalizeStr(c.nombre)}</span>
+            </div>
+            {c.sucursal && (
+              <span className="mt-0.5 truncate text-[10px] font-bold text-blue-600">
+                {capitalizeStr(c.sucursal)}
+              </span>
+            )}
+
+            <div className="mt-1.5 flex items-center gap-2">
+              <span
+                className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                  c.status === 'activo'
+                    ? 'bg-emerald-100/80 text-emerald-700'
+                    : 'bg-red-100 text-red-600'
+                }`}
+              >
+                {c.status === 'activo' ? 'Activo' : 'S/C'}
+              </span>
+
+              {/* BADGE DE CAMPO VS REMOTA */}
+              {c.status === 'activo' &&
+                (c.ventaEnCampo ? (
+                  <span className="flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-600 border border-blue-100/50">
+                    <CarFront className="h-2.5 w-2.5" /> Campo
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 rounded bg-purple-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-purple-600 border border-purple-100/50">
+                    <PhoneCall className="h-2.5 w-2.5" /> Remota
+                  </span>
+                ))}
+            </div>
+          </div>
+
+          {/* LADO DERECHO: Montos */}
+          <div className="flex shrink-0 flex-col items-end text-right">
+            <span className="text-sm font-extrabold text-slate-800">
+              $
+              {c.ventaMXN.toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+            </span>
+            {c.ventaUSD > 0 && (
+              <span className="mt-0.5 text-[9px] font-bold text-slate-600">
+                USD $
+                {c.ventaUSD.toLocaleString('en-US', {
+                  maximumFractionDigits: 0,
+                })}
+              </span>
+            )}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+// ==========================================
+// 2. LISTA DE AUDITORÍA (VISITADOS)
+// ==========================================
+export function VisitsSummaryList({ visits }: { visits: ClientDetail[] }) {
+  if (visits.length === 0) {
+    return (
+      <div className="p-4 text-center text-xs font-medium text-slate-400">
+        No hay visitas registradas.
+      </div>
+    );
+  }
+
+  const parseClientId = (rawId: string) => {
+    const [numeroCliente, sucursalId] = rawId.split('_');
+    return {
+      numeroCliente: numeroCliente ?? rawId,
+      sucursalId: sucursalId ?? '',
+    };
+  };
+
+  return (
+    <>
+      {visits.map((v) => (
+        <div
+          key={v.id}
+          className="flex items-center justify-between border-b border-slate-100 pb-2.5 pt-1.5 last:border-0 hover:bg-slate-50/50 transition-colors rounded-md px-2 -mx-2"
+        >
+          <div className="flex min-w-0 flex-1 flex-col pr-4">
+            <div className="flex gap-1 truncate text-xs font-extrabold text-slate-800">
+              <span>#{parseClientId(v.id).numeroCliente}</span>
+              <span>{capitalizeStr(v.nombre)}</span>
+            </div>
+
+            <div className="mt-1.5 flex items-center gap-2">
+              <span
+                className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                  v.status === 'activo'
+                    ? 'bg-emerald-100/80 text-emerald-700'
+                    : 'bg-red-100 text-red-600'
+                }`}
+              >
+                {v.status === 'activo'
+                  ? 'Visitado y Compró'
+                  : 'Visitado (Sin Venta)'}
+              </span>
+              <span className="rounded px-1.5 py-0.5 text-[9px] font-bold text-slate-500 bg-slate-100">
+                Vend: {formatVendorTag(v.vendedor)}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-col items-end text-right">
+            <span className="text-sm font-extrabold text-slate-800">
+              $
+              {v.ventaMXN.toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+            </span>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+// ==========================================
+// 3. LISTA DE FINANZAS (VENDEDORES)
+// ==========================================
+export function VendorSummaryList({ vendors }: { vendors: VendorSummary[] }) {
+  if (vendors.length === 0) {
+    return (
+      <div className="p-4 text-center text-xs font-medium text-slate-400">
+        No hay información financiera.
+      </div>
+    );
+  }
+
+  const inactivos = vendors.reduce(
+    (acc, v) => acc + (v.clientes - v.activos),
+    0
+  );
+
+  return (
+    <>
+      {vendors.map((v) => (
+        <div
+          key={v.vendedor}
+          className="flex items-center justify-between border-b border-slate-100 pb-2.5 pt-1.5 last:border-0 hover:bg-slate-50/50 transition-colors rounded-md px-2 -mx-2"
+        >
+          <div className="flex min-w-0 flex-1 flex-col pr-4">
+            <span className="truncate text-xs font-extrabold uppercase tracking-wide text-slate-800">
+              {formatVendorTag(v.vendedor)}
+            </span>
+
+            <div className="mt-1.5 flex items-center gap-2 text-[10px] font-bold text-slate-500">
+              <span>
+                <span className="text-slate-800">{v.clientes}</span> Clientes
+              </span>
+              <span className="text-slate-200">|</span>
+              <span className="text-emerald-600">{v.activos} Activos</span>
+              <span className="text-slate-200">|</span>
+              <span className="text-red-600">{inactivos} Inactivos</span>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-col items-end text-right">
+            <span className="text-sm font-extrabold text-slate-800">
+              $
+              {v.ventaMXN.toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+            </span>
+            <span className="mt-0.5 text-[9px] font-bold text-slate-400">
+              Promedio: $
+              {v.ticketPromedio.toLocaleString('es-MX', {
+                maximumFractionDigits: 0,
+              })}
+            </span>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
