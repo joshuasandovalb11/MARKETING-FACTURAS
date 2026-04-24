@@ -26,10 +26,7 @@ interface GlobalSearchProps {
   selectedGrupoEmpresarialIds: string[];
   onSelectVendor: (vendorId: string) => void;
   onSelectProveedor: (proveedorId: string, mode: 'add' | 'replace') => void;
-  onSelectGrupoEmpresarial: (
-    grupoId: string,
-    mode: 'add' | 'replace'
-  ) => void;
+  onSelectGrupoEmpresarial: (grupoId: string, mode: 'add' | 'replace') => void;
 }
 
 type SearchResultType = 'cliente' | 'vendedor' | 'proveedor' | 'grupo';
@@ -602,20 +599,67 @@ export default function GlobalSearch({
               !error &&
               searchLen >= 2 &&
               resultsByType.total === 0 && (
-                <div className="p-8 text-center flex flex-col items-center text-slate-400 gap-3">
-                  <Search className="w-6 h-6 text-slate-300" />
-                  <span className="text-sm font-medium text-slate-600">
-                    No se encontraron resultados
-                  </span>
+                <div className="p-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-5 text-center">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400">
+                      <Search className="h-4 w-4" />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-800">
+                      Sin coincidencias
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      No encontramos resultados para "{inputValue.trim()}".
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+                      <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                        Revisa ortografia
+                      </span>
+                      <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                        Intenta por ID
+                      </span>
+                      <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                        Usa menos texto
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
 
             {!showLoading && !error && searchLen < 2 && (
-              <div className="p-8 text-center flex flex-col items-center text-slate-400 gap-3">
-                <UserRoundSearch className="w-6 h-6" />
-                <span className="text-sm font-medium text-slate-600">
-                  Escribe al menos 2 caracteres para buscar
-                </span>
+              <div className="p-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-5 text-center">
+                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400">
+                    <UserRoundSearch className="h-4 w-4" />
+                  </div>
+
+                  <p className="text-sm font-semibold text-slate-800">
+                    Comienza tu busqueda
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Escribe 2 o mas caracteres para buscar en cliente, vendedor,
+                    proveedor y grupo.
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                      Cliente
+                    </span>
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                      Vendedor
+                    </span>
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                      Proveedor
+                    </span>
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                      Grupo
+                    </span>
+                  </div>
+
+                  <p className="mt-3 text-[11px] font-medium text-slate-400">
+                    Ej: 12045, Juan Perez, FANDELI, Grupo Zapata
+                  </p>
+                </div>
               </div>
             )}
           </motion.div>
