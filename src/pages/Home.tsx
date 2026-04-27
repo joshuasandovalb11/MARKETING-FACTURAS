@@ -13,7 +13,12 @@ import StatusPicker from '../components/filters/StatusPicker';
 import GlobalSearch from '../components/filters/GlobalSearch';
 import ProveedorPicker from '../components/filters/ProveedorPicker';
 import GrupoEmpresarialPicker from '../components/filters/GrupoEmpresarialPicker';
+import ActiveFiltersModal from '../components/filters/ActiveFiltersModal';
+import { countActiveFilters } from '../components/filters/ActiveFiltersBar';
 import FilterSection from '../components/ui/FilterSection';
+import { useVendors } from '../hooks/useVendors';
+import { useProveedores } from '../hooks/useProveedores';
+import { useGruposEmpresariales } from '../hooks/useGruposEmpresariales';
 import type { Client } from '../types';
 import Login from './Login';
 import UserMenu from '../components/ui/UserMenu';
@@ -79,8 +84,14 @@ export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isLoginTransitioning, setIsLoginTransitioning] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isActiveFiltersModalOpen, setIsActiveFiltersModalOpen] =
+    useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const { notify } = useNotificationToast();
+
+  const { vendors } = useVendors();
+  const { proveedores } = useProveedores();
+  const { gruposEmpresariales } = useGruposEmpresariales();
 
   const [isInvoiceDrawerOpen, setIsInvoiceDrawerOpen] = useState(false);
   const [invoiceClient, setInvoiceClient] = useState<Client | null>(null);
@@ -137,6 +148,16 @@ export default function Home() {
     filters.idGrupoEmpresarialIds.length > 0 ||
     (filters.status !== '' && filters.status !== 'all')
   );
+
+  const activeFiltersCount = countActiveFilters({
+    selectedClient,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    vendor: filters.vendor,
+    status: filters.status,
+    idProveedorIds: filters.idProveedorIds,
+    idGrupoEmpresarialIds: filters.idGrupoEmpresarialIds,
+  });
 
   const filterHash =
     JSON.stringify(filters) +
@@ -296,6 +317,22 @@ export default function Home() {
     ]);
   };
 
+  const handleClearClient = () => {
+    setSelectedClient(null);
+  };
+
+  const handleClearProveedor = (proveedorId: string) => {
+    const filtered = filters.idProveedorIds.filter((id) => id !== proveedorId);
+    handleProveedorSelect(filtered);
+  };
+
+  const handleClearGrupo = (grupoId: string) => {
+    const filtered = filters.idGrupoEmpresarialIds.filter(
+      (id) => id !== grupoId
+    );
+    handleGrupoEmpresarialSelect(filtered);
+  };
+
   const handleRefresh = () => {
     const hadActiveContext = hasActiveFilters || Boolean(selectedClient);
 
@@ -337,12 +374,23 @@ export default function Home() {
           </div>
 
           <div className="flex px-5 py-3.5 justify-between items-center border-b border-slate-200 shrink-0">
-            <div className="flex gap-2 items-center">
+            <button
+              onClick={() =>
+                setIsActiveFiltersModalOpen(!isActiveFiltersModalOpen)
+              }
+              className="flex gap-2 items-center hover:opacity-80 transition-opacity"
+              title="Ver filtros aplicados"
+            >
               <SlidersHorizontal className="h-3.5 w-3.5 text-slate-700" />
               <h2 className="text-xs font-bold text-slate-700 tracking-wider uppercase">
                 Filtros
               </h2>
-            </div>
+              {activeFiltersCount > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-blue-500 text-white text-[10px] font-bold">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
             <button
               onClick={handleRefresh}
               title="Limpiar todos los filtros"
@@ -462,10 +510,32 @@ export default function Home() {
       </main>
 
       {user && (
-        <Logout
-          isOpen={isLogoutModalOpen}
-          onClose={() => setIsLogoutModalOpen(false)}
-        />
+        <>
+          <ActiveFiltersModal
+            isOpen={isActiveFiltersModalOpen}
+            onClose={() => setIsActiveFiltersModalOpen(false)}
+            selectedClient={selectedClient}
+            startDate={filters.startDate}
+            endDate={filters.endDate}
+            vendor={filters.vendor}
+            status={filters.status}
+            idProveedorIds={filters.idProveedorIds}
+            idGrupoEmpresarialIds={filters.idGrupoEmpresarialIds}
+            vendors={vendors}
+            proveedores={proveedores}
+            gruposEmpresariales={gruposEmpresariales}
+            onClearClient={handleClearClient}
+            onClearDateRange={handleDateRangeClear}
+            onClearVendor={() => handleVendorSelect('')}
+            onClearStatus={() => handleStatusSelect('')}
+            onClearProveedor={handleClearProveedor}
+            onClearGrupo={handleClearGrupo}
+          />
+          <Logout
+            isOpen={isLogoutModalOpen}
+            onClose={() => setIsLogoutModalOpen(false)}
+          />
+        </>
       )}
     </div>
   );
