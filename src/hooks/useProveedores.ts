@@ -16,7 +16,7 @@ export function useProveedores() {
     gcTime: QUERY_TIMES.staticCatalogGc,
     retry: QUERY_RETRY,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: true,
+    refetchOnReconnect: false,
     select: (proveedores) =>
       [...proveedores].sort((a, b) => a.nombre.localeCompare(b.nombre)),
   });

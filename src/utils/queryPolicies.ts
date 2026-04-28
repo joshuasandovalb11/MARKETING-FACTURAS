@@ -1,13 +1,43 @@
+import { ApiRequestError } from '../services/httpClient';
+
 export const QUERY_TIMES = {
   staticCatalogStale: 1000 * 60 * 60 * 12,
   staticCatalogGc: 1000 * 60 * 60 * 24,
+  clientSearchStale: 1000 * 60 * 10,
+  clientSearchGc: 1000 * 60 * 30,
   analysisStale: 1000 * 60 * 5,
   analysisGc: 1000 * 60 * 30,
   invoicesStale: 1000 * 60 * 10,
   invoicesGc: 1000 * 60 * 30,
 } as const;
 
-export const QUERY_RETRY = 1;
+const RETRYABLE_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+export const QUERY_RETRY_LIMIT = 2;
+
+export function QUERY_RETRY(failureCount: number, error: unknown) {
+  if (failureCount >= QUERY_RETRY_LIMIT) {
+    return false;
+  }
+
+  if (error instanceof ApiRequestError) {
+    if (error.code === 'NETWORK' || error.code === 'TIMEOUT') {
+      return true;
+    }
+
+    return (
+      error.code === 'HTTP' &&
+      typeof error.status === 'number' &&
+      RETRYABLE_HTTP_STATUSES.has(error.status)
+    );
+  }
+
+  return true;
+}
+
+export function getRetryDelay(attemptIndex: number) {
+  return Math.min(1000 * 2 ** attemptIndex, 10000);
+}
 
 function normalizeProviderIds(ids: string[] | undefined) {
   if (!ids || ids.length === 0) return [] as string[];

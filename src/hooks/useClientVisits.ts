@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchClientVisits } from '../services/marketingApi';
 import type { Client, ClientVisitsResponse } from '../types';
+import { QUERY_RETRY } from '../utils/queryPolicies';
 
 interface UseClientVisitsProps {
   client: Client | null;
@@ -25,7 +26,10 @@ export function useClientVisits({ client, filters }: UseClientVisitsProps) {
     },
     enabled: !!client && !!client.lat && !!client.lng,
     staleTime: 5 * 60 * 1000,
-    retry: 1,
+    gcTime: 1000 * 60 * 30,
+    retry: QUERY_RETRY,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   return {

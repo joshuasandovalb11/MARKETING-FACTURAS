@@ -49,7 +49,7 @@ export function useClientInvoices({
     gcTime: QUERY_TIMES.invoicesGc,
     retry: QUERY_RETRY,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: true,
+    refetchOnReconnect: false,
 
     queryFn: ({ signal }) =>
       fetchClientInvoices({

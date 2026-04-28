@@ -13,7 +13,7 @@ export function useVendors() {
     gcTime: QUERY_TIMES.staticCatalogGc,
     retry: QUERY_RETRY,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: true,
+    refetchOnReconnect: false,
     select: (vendors) =>
       [...vendors].sort((a, b) => a.nombre.localeCompare(b.nombre)),
   });

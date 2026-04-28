@@ -52,7 +52,7 @@ export function useMarketingAnalysis({
     gcTime: QUERY_TIMES.analysisGc,
     retry: QUERY_RETRY,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: true,
+    refetchOnReconnect: false,
 
     queryFn: async ({ signal }) => {
       const rawData: Client[] = await fetchMarketingAnalysis({

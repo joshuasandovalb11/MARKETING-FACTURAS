@@ -18,7 +18,7 @@ export function useGruposEmpresariales() {
     gcTime: QUERY_TIMES.staticCatalogGc,
     retry: QUERY_RETRY,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: true,
+    refetchOnReconnect: false,
     select: (grupos) =>
       [...grupos].sort((a, b) => a.nombre.localeCompare(b.nombre)),
   });

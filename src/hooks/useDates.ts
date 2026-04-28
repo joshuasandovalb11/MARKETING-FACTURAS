@@ -11,7 +11,7 @@ export function useFechasDisponibles() {
     gcTime: QUERY_TIMES.staticCatalogGc,
     retry: QUERY_RETRY,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: true,
+    refetchOnReconnect: false,
     select: (dates) => [...dates].sort(),
   });
 

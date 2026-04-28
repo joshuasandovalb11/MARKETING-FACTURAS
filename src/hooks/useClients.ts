@@ -37,7 +37,7 @@ export function useClients() {
         const data = await queryClient.fetchQuery({
           queryKey: ['clientSearch', normalizedTerm.toLowerCase()],
           queryFn: ({ signal }) => searchClientsByTerm(normalizedTerm, signal),
-          staleTime: 1000 * 60 * 5,
+          staleTime: 1000 * 60 * 10,
         });
 
         if (requestSeq !== requestSeqRef.current) {
