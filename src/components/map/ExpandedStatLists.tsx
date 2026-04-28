@@ -113,7 +113,7 @@ export function VisitsSummaryList({ visits }: { visits: ClientDetail[] }) {
               <span>{capitalizeStr(v.nombre)}</span>
             </div>
 
-            <div className="mt-1.5 flex items-center gap-2">
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <span
                 className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
                   v.status === 'activo'
@@ -128,6 +128,12 @@ export function VisitsSummaryList({ visits }: { visits: ClientDetail[] }) {
               <span className="rounded px-1.5 py-0.5 text-[9px] font-bold text-slate-500 bg-slate-100">
                 Vend: {formatVendorTag(v.vendedor)}
               </span>
+
+              {v.fechasVisitas && v.fechasVisitas.length > 0 && (
+                <span className="rounded px-1.5 py-0.5 text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100/50">
+                  {v.fechasVisitas.join(', ')}
+                </span>
+              )}
             </div>
           </div>
 
@@ -136,6 +142,14 @@ export function VisitsSummaryList({ visits }: { visits: ClientDetail[] }) {
               $
               {v.ventaMXN.toLocaleString('es-MX', { maximumFractionDigits: 0 })}
             </span>
+            {v.ventaUSD > 0 && (
+              <span className="mt-0.5 text-[9px] font-bold text-slate-600">
+                USD $
+                {v.ventaUSD.toLocaleString('en-US', {
+                  maximumFractionDigits: 0,
+                })}
+              </span>
+            )}
           </div>
         </div>
       ))}

@@ -1,3 +1,4 @@
+// src/hooks/useMapStatistics.ts
 import { useMemo } from 'react';
 import type { Client } from '../types';
 
@@ -10,6 +11,7 @@ export interface ClientDetail {
   ventaUSD: number;
   ventaEnCampo: boolean;
   fueVisitado: boolean;
+  fechasVisitas: string[];
   vendedor: string;
 }
 
@@ -93,6 +95,7 @@ export function useMapStatistics(clients: Client[]) {
         ventaUSD: vUSD,
         ventaEnCampo,
         fueVisitado,
+        fechasVisitas: marketingData?.fechasVisitas || [],
         vendedor: vendedorStr,
       };
 

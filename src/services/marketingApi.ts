@@ -56,6 +56,13 @@ function normalizeAnalysisClient(row: unknown): Client | null {
   const marketingRaw = isRecord(row.marketingData) ? row.marketingData : {};
   const clienteId = readStringOrNumber(marketingRaw.clienteId) ?? id;
 
+  const fechasVisitasRaw = Array.isArray(marketingRaw.fechasVisitas)
+    ? marketingRaw.fechasVisitas
+    : [];
+  const fechasVisitas = fechasVisitasRaw.filter(
+    (f): f is string => typeof f === 'string'
+  );
+
   return {
     id,
     name: readString(row.name) || 'Cliente sin nombre',
@@ -74,6 +81,7 @@ function normalizeAnalysisClient(row: unknown): Client | null {
       status: normalizeStatus(marketingRaw.status),
       visitadoEnPeriodo: Boolean(marketingRaw.visitadoEnPeriodo),
       ventaEnCampo: Boolean(marketingRaw.ventaEnCampo),
+      fechasVisitas: fechasVisitas,
     },
   };
 }

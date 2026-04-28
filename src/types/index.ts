@@ -8,6 +8,7 @@ export interface MarketingData {
   status: 'activo' | 'sin_compra';
   visitadoEnPeriodo?: boolean;
   ventaEnCampo?: boolean;
+  fechasVisitas?: string[];
 }
 
 export interface Client {
