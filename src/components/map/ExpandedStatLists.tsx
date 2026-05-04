@@ -14,9 +14,37 @@ const parseClientId = (rawId: string) => {
   };
 };
 
-// ==========================================
-// 1. LISTA DE CLIENTES
-// ==========================================
+const visitChipClassName =
+  'inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] 2xl:text-[12px] font-bold text-blue-600 bg-blue-50 border border-blue-100/50 whitespace-nowrap';
+
+function getBreakpointMax() {
+  if (typeof window === 'undefined') return 3;
+  const w = window.innerWidth;
+  return w >= 1536 ? 6 : 3;
+}
+
+function VisitDatesChips({ dates }: { dates: string[] }) {
+  const breakpointMax = getBreakpointMax();
+  const visibleCount = Math.min(dates.length, breakpointMax);
+  const overflowCount = dates.length - visibleCount;
+
+  return (
+    <div className="min-w-0 max-w-full">
+      <div className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden whitespace-nowrap">
+        {dates.slice(0, visibleCount).map((date) => (
+          <span key={date} className={visitChipClassName}>
+            {date}
+          </span>
+        ))}
+
+        {overflowCount > 0 && (
+          <span className={visitChipClassName}>+{overflowCount} visitas</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ClientSummaryList({ clients }: { clients: ClientDetail[] }) {
   if (clients.length === 0) {
     return (
@@ -34,37 +62,41 @@ export function ClientSummaryList({ clients }: { clients: ClientDetail[] }) {
           className="flex items-center justify-between border-b border-slate-100 pb-2.5 pt-1.5 last:border-0 hover:bg-slate-50/50 transition-colors rounded-md px-2 -mx-2"
         >
           <div className="flex min-w-0 flex-1 flex-col pr-4">
-            <div className="flex gap-1 truncate text-xs font-extrabold text-slate-800">
+            <div className="flex gap-1 truncate text-xs 2xl:text-sm font-extrabold text-slate-800">
               <span>#{parseClientId(c.id).numeroCliente}</span>
               <span>{capitalizeStr(c.nombre)}</span>
+              {c.sucursal && (
+                <span className="font-bold text-blue-600">
+                  ({capitalizeStr(c.sucursal)})
+                </span>
+              )}
             </div>
-            {c.sucursal && (
-              <span className="mt-0.5 truncate text-[10px] font-bold text-blue-600">
-                {capitalizeStr(c.sucursal)}
-              </span>
-            )}
 
             <div className="mt-1.5 flex items-center gap-2">
               <span
-                className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                className={`rounded px-1.5 py-0.5 text-[9px] 2xl:text-[11px] font-bold uppercase tracking-wider ${
                   c.status === 'activo'
                     ? 'bg-emerald-100/80 text-emerald-700'
                     : 'bg-red-100 text-red-600'
                 }`}
               >
-                {c.status === 'activo' ? 'Activo' : 'S/C'}
+                {c.status === 'activo' ? 'C/C' : 'S/C'}
               </span>
 
               {c.status === 'activo' &&
                 (c.ventaEnCampo ? (
-                  <span className="flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-600 border border-blue-100/50">
+                  <span className="flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-[9px] 2xl:text-[11px] font-bold uppercase text-blue-600 border border-blue-100/50">
                     <CarFront className="h-2.5 w-2.5" /> Campo
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 rounded bg-purple-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-purple-600 border border-purple-100/50">
+                  <span className="flex items-center gap-1 rounded bg-purple-50 px-1.5 py-0.5 text-[9px] 2xl:text-[11px] font-bold uppercase text-purple-600 border border-purple-100/50">
                     <PhoneCall className="h-2.5 w-2.5" /> Remota
                   </span>
                 ))}
+
+              {c.fechasVisitas && c.fechasVisitas.length > 0 && (
+                <VisitDatesChips dates={c.fechasVisitas} />
+              )}
             </div>
           </div>
 
@@ -74,7 +106,7 @@ export function ClientSummaryList({ clients }: { clients: ClientDetail[] }) {
               {c.ventaMXN.toLocaleString('es-MX', { maximumFractionDigits: 0 })}
             </span>
             {c.ventaUSD > 0 && (
-              <span className="mt-0.5 text-[9px] font-bold text-slate-600">
+              <span className="mt-0.5 text-[10px] 2xl:text-[12px] font-bold text-slate-600">
                 USD $
                 {c.ventaUSD.toLocaleString('en-US', {
                   maximumFractionDigits: 0,
@@ -108,31 +140,33 @@ export function VisitsSummaryList({ visits }: { visits: ClientDetail[] }) {
           className="flex items-center justify-between border-b border-slate-100 pb-2.5 pt-1.5 last:border-0 hover:bg-slate-50/50 transition-colors rounded-md px-2 -mx-2"
         >
           <div className="flex min-w-0 flex-1 flex-col pr-4">
-            <div className="flex gap-1 truncate text-xs font-extrabold text-slate-800">
+            <div className="flex gap-1 truncate text-xs 2xl:text-sm font-extrabold text-slate-800">
               <span>#{parseClientId(v.id).numeroCliente}</span>
               <span>{capitalizeStr(v.nombre)}</span>
+              {v.sucursal && (
+                <span className="font-bold text-blue-600">
+                  ({capitalizeStr(v.sucursal)})
+                </span>
+              )}
             </div>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <span
-                className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                className={`rounded px-1.5 py-0.5 text-[9px] 2xl:text-[11px] font-bold uppercase tracking-wider ${
                   v.status === 'activo'
                     ? 'bg-emerald-100/80 text-emerald-700'
                     : 'bg-red-100 text-red-600'
                 }`}
               >
-                {v.status === 'activo'
-                  ? 'Visitado y Compró'
-                  : 'Visitado (Sin Venta)'}
+                {v.status === 'activo' ? 'Visitado (C/C)' : 'Visitado (S/C)'}
               </span>
-              <span className="rounded px-1.5 py-0.5 text-[9px] font-bold text-slate-500 bg-slate-100">
-                Vend: {formatVendorTag(v.vendedor)}
+
+              <span className="rounded px-1.5 py-0.5 text-[10px] 2xl:text-[12px] tracking-widest font-bold text-orange-800 bg-orange-100">
+                {formatVendorTag(v.vendedor)}
               </span>
 
               {v.fechasVisitas && v.fechasVisitas.length > 0 && (
-                <span className="rounded px-1.5 py-0.5 text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100/50">
-                  {v.fechasVisitas.join(', ')}
-                </span>
+                <VisitDatesChips dates={v.fechasVisitas} />
               )}
             </div>
           </div>
@@ -143,7 +177,7 @@ export function VisitsSummaryList({ visits }: { visits: ClientDetail[] }) {
               {v.ventaMXN.toLocaleString('es-MX', { maximumFractionDigits: 0 })}
             </span>
             {v.ventaUSD > 0 && (
-              <span className="mt-0.5 text-[9px] font-bold text-slate-600">
+              <span className="mt-0.5 text-[10px] 2xl:text-[12px] font-bold text-slate-600">
                 USD $
                 {v.ventaUSD.toLocaleString('en-US', {
                   maximumFractionDigits: 0,
@@ -184,7 +218,7 @@ export function VendorSummaryList({ vendors }: { vendors: VendorSummary[] }) {
                 {formatVendorTag(v.vendedor)}
               </span>
 
-              <div className="mt-1.5 flex items-center gap-2 text-[10px] font-bold text-slate-500">
+              <div className="mt-1.5 flex items-center gap-2 text-[10px] 2xl:text-[12px] font-bold text-slate-500">
                 <span>
                   <span className="text-slate-800">{v.clientes}</span> Clientes
                 </span>
@@ -202,7 +236,7 @@ export function VendorSummaryList({ vendors }: { vendors: VendorSummary[] }) {
                   maximumFractionDigits: 0,
                 })}
               </span>
-              <span className="mt-0.5 text-[9px] font-bold text-slate-400">
+              <span className="mt-0.5 text-[10px] 2xl:text-[12px] font-bold text-slate-500">
                 Promedio: $
                 {v.ticketPromedio.toLocaleString('es-MX', {
                   maximumFractionDigits: 0,

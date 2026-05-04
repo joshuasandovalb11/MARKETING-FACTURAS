@@ -71,9 +71,9 @@ export default function MapStatisticsBar({ stats }: MapStatisticsBarProps) {
                       Clientes
                     </span>
                   </div>
-                  <div className="flex items-center justify-center gap-1.5 2xl:gap-2 text-[9px] 2xl:text-[11px] leading-tight">
+                  <div className="flex items-center justify-center gap-1.5 2xl:gap-2 text-[10px] 2xl:text-[12px] leading-tight">
                     <span className="font-bold text-emerald-600">
-                      {stats.activos} Activos
+                      {stats.activos} C/C
                     </span>
                     <span className="ml-1 font-bold text-slate-600">
                       ({stats.conversion}%)
@@ -83,7 +83,7 @@ export default function MapStatisticsBar({ stats }: MapStatisticsBarProps) {
                       {stats.inactivos} S/C
                     </span>
                   </div>
-                  <div className="mt-1 flex items-center justify-center gap-1.5 2xl:gap-2 text-[9px] 2xl:text-[11px] leading-tight">
+                  <div className="mt-1 flex items-center justify-center gap-1.5 2xl:gap-2 text-[10px] 2xl:text-[12px] leading-tight">
                     <span className="font-bold text-blue-600">
                       {stats.ventasCampo} Campo
                     </span>
@@ -114,12 +114,12 @@ export default function MapStatisticsBar({ stats }: MapStatisticsBarProps) {
                       Visitados
                     </span>
                   </div>
-                  <div className="flex items-center justify-center text-[9px] 2xl:text-[11px] font-medium leading-tight">
-                    <span className="font-bold text-emerald-600">
-                      {stats.visitadosCompraron} Activos
+                  <div className="flex items-center justify-center text-[10px] 2xl:text-[12px] font-medium leading-tight">
+                    <span className="font-bold text-blue-600">
+                      {stats.visitadosCompraron} C/C
                     </span>
                   </div>
-                  <div className="mt-1 flex items-center justify-center text-[9px] 2xl:text-[11px] font-medium leading-tight">
+                  <div className="mt-1 flex items-center justify-center text-[10px] 2xl:text-[12px] font-medium leading-tight">
                     <span className="font-bold text-red-500">
                       {stats.visitadosNoCompraron} S/C
                     </span>
@@ -139,7 +139,7 @@ export default function MapStatisticsBar({ stats }: MapStatisticsBarProps) {
                   }`}
                 >
                   <div className="mb-1 2xl:mb-1.5 flex items-baseline justify-center gap-1.5 2xl:gap-2">
-                    <span className="text-xs 2xl:text-sm font-extrabold leading-none text-slate-800">
+                    <span className="text-sm 2xl:text-md font-extrabold leading-none text-slate-800">
                       MXN $
                       {stats.totalMXN.toLocaleString('es-MX', {
                         maximumFractionDigits: 0,
@@ -148,7 +148,7 @@ export default function MapStatisticsBar({ stats }: MapStatisticsBarProps) {
                     {stats.totalUSD > 0 && (
                       <>
                         <span className="text-slate-300">|</span>
-                        <span className="text-xs 2xl:text-sm font-extrabold leading-none text-slate-800">
+                        <span className="text-sm 2xl:text-md font-extrabold leading-none text-slate-800">
                           USD $
                           {stats.totalUSD.toLocaleString('en-US', {
                             maximumFractionDigits: 0,
@@ -157,7 +157,7 @@ export default function MapStatisticsBar({ stats }: MapStatisticsBarProps) {
                       </>
                     )}
                   </div>
-                  <div className="text-[9px] 2xl:text-[11px] font-medium text-slate-500">
+                  <div className="text-[10px] 2xl:text-[12px] font-medium text-slate-500">
                     Ticket Promedio:{' '}
                     <span className="font-bold text-slate-700">
                       $
