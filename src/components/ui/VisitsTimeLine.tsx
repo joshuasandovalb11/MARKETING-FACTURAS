@@ -38,10 +38,10 @@ const formatSafeTime = (timeStr: string) => {
 export default function VisitsTimeline({ visitas }: VisitsTimelineProps) {
   if (!visitas || visitas.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+      <div className="flex flex-col items-center justify-center h-full py-12 text-slate-400">
         <MapPin className="w-7 h-7 mb-3" />
         <p className="text-xs font-medium">
-          No hay visitas GPS en este rango de fechas
+          Sin visitas GPS en este periodo.
         </p>
       </div>
     );

@@ -1,7 +1,7 @@
 // src/components/ui/InvoiceDrawer.tsx
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, Package, Building2 } from 'lucide-react';
+import { X, ChevronDown, Package, Building2, BadgeDollarSign } from 'lucide-react';
 import type { Client } from '../../types';
 import { useClientInvoices } from '../../hooks/useClientInvoices';
 import { useClientVisits } from '../../hooks/useClientVisits';
@@ -175,22 +175,20 @@ export default function InvoiceDrawer({
                 <button
                   type="button"
                   onClick={() => setActiveTab('invoices')}
-                  className={`flex items-center justify-center gap-2 rounded-md py-2 text-xs font-bold transition-colors cursor-pointer border ${
-                    activeTab === 'invoices'
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                  }`}
+                  className={`flex items-center justify-center gap-2 rounded-md py-2 text-xs font-bold transition-colors cursor-pointer border ${activeTab === 'invoices'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
                 >
                   Facturas
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('visits')}
-                  className={`flex items-center justify-center gap-2 rounded-md py-2 text-xs font-bold transition-colors cursor-pointer border ${
-                    activeTab === 'visits'
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                  }`}
+                  className={`flex items-center justify-center gap-2 rounded-md py-2 text-xs font-bold transition-colors cursor-pointer border ${activeTab === 'visits'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
                 >
                   Visitas
                 </button>
@@ -273,13 +271,12 @@ export default function InvoiceDrawer({
                             {/* ROW DE CANAL: CAMPO / REMOTA */}
                             <div className="flex mb-1 justify-end">
                               <span
-                                className={`inline-flex items-center gap-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-                                  isLoadingVisits
-                                    ? 'bg-slate-100 text-slate-400'
-                                    : inv.isFieldSale
-                                      ? 'text-emerald-700'
-                                      : 'text-blue-700'
-                                }`}
+                                className={`inline-flex items-center gap-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${isLoadingVisits
+                                  ? 'bg-slate-100 text-slate-400'
+                                  : inv.isFieldSale
+                                    ? 'text-emerald-700'
+                                    : 'text-blue-700'
+                                  }`}
                               >
                                 {isLoadingVisits ? (
                                   <span>Analizando...</span>
@@ -304,6 +301,7 @@ export default function InvoiceDrawer({
                                       day: '2-digit',
                                       month: 'short',
                                       year: 'numeric',
+                                      timeZone: 'UTC',
                                     }
                                   )}
                                 </span>
@@ -395,8 +393,9 @@ export default function InvoiceDrawer({
                   })}
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-xs text-slate-400">
+                <div className="flex flex-col items-center justify-center h-full py-12 text-slate-400">
+                  <BadgeDollarSign className="w-7 h-7 mb-3" />
+                  <p className="text-xs font-medium">
                     Sin facturas en este periodo.
                   </p>
                 </div>

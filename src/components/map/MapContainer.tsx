@@ -218,11 +218,10 @@ export default function MapContainer({
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-700 font-medium">Estado:</span>
                   <span
-                    className={`font-bold ${
-                      selectedClient.marketingData?.status === 'activo'
-                        ? 'text-green-600'
-                        : 'text-red-600'
-                    }`}
+                    className={`font-bold ${selectedClient.marketingData?.status === 'activo'
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                      }`}
                   >
                     {formatStatusText}
                   </span>
@@ -272,31 +271,28 @@ export default function MapContainer({
                     Ult. Visita:
                   </span>
                   <span
-                    className={`font-semibold ${
-                      isLoadingVisits
-                        ? 'text-gray-900'
-                        : visitsData?.ultimaVisitaAbsoluta
-                          ? 'text-stone-900'
-                          : 'text-red-600'
-                    }`}
+                    className={`font-semibold ${isLoadingVisits
+                      ? 'text-gray-900'
+                      : visitsData?.ultimaVisitaAbsoluta
+                        ? 'text-stone-900'
+                        : 'text-red-600'
+                      }`}
                   >
                     {isLoadingVisits
                       ? 'Cargando...'
                       : formatLastVisitSummary(
-                          visitsData?.ultimaVisitaAbsoluta ?? null
-                        )}
+                        visitsData?.ultimaVisitaAbsoluta ?? null
+                      )}
                   </span>
                 </div>
               </div>
 
-              {(selectedClient.marketingData?.ordersCount || 0) > 0 && (
-                <button
-                  onClick={() => onOpenInvoices?.(selectedClient)}
-                  className="mt-2 w-full items-center text-center justify-center text-blue-700 hover:underline font-bold text-[11px] tracking-wider transition-colors cursor-pointer"
-                >
-                  Ver detalle
-                </button>
-              )}
+              <button
+                onClick={() => onOpenInvoices?.(selectedClient)}
+                className="mt-2 w-full items-center text-center justify-center text-blue-700 hover:underline font-bold text-[11px] tracking-wider transition-colors cursor-pointer"
+              >
+                Ver detalle
+              </button>
             </div>
           </InfoWindow>
         )}
